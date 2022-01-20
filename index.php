@@ -374,7 +374,7 @@ const programInfo =	{
 
 const buffers = initBuffers(gl);
 
-const texture = loadTexture(gl, 'chessBoard.jpg');
+const texture = loadTexture(gl, 'chessField.jpg');
 
 var then = 0;
 
