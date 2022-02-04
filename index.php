@@ -221,6 +221,9 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 
 	for (let i = 0; i< objects.length; i++) {
 
+	if (objects[i].field !== undefined)	{
+		objects[i].translation = getChoords(objects[i].field);
+	}
 	const modelViewMatrix = mat4.create();
 
 	if (objects[i].translation !== undefined)	{
@@ -321,6 +324,8 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
 	gl.uniform3fv(programInfo.uniformLocations.lightDirection, lightDirection);
+
+	gl.uniform3fv(programInfo.uniformLocations.ambientLight, ambientLight);
 
 	{
 		const offset = 0;
@@ -468,6 +473,7 @@ const fsSource = `
 
 	uniform mediump vec3 uLightDirection;
 	uniform sampler2D uSampler;
+	uniform lowp vec3 uAmbientLight;
 
 	void main()     {
 		mediump vec3 normal = normalize(vVertexNormal);
@@ -476,18 +482,20 @@ const fsSource = `
 		mediump float light = dot(normal, direction);
 
 		mediump vec3 temp = texture2D(uSampler, vTextureCoord).rgb;
-		mediump vec3 clamped = temp.rgb + 0.2 - temp.rgb * 0.2;
-		gl_FragColor.rgb = (temp + 0.2 + temp *0.2) * 0.2 + max(clamped * light * 0.8, 0.0);
+		mediump vec3 clamped = temp.rgb + uAmbientLight - temp.rgb * uAmbientLight;
+		gl_FragColor.rgb = (temp + uAmbientLight + temp *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
 	}
 `;
 var pointerRotation = 0.0;
 var lightDirection = [1.3, 0.7, -1.0];
+var ambientLight = [0.3, 0.2, 0.2];
 var cameraView = {
 	angle: 0.45,
 	rotation: 0,
 	translation: [0, 0, -2.5],
 	sceneRotation: 0.0,
 }
+var objects = [];
 const a1	= [-0.88, -1.1, 0.88];
 const h1 	= [0.88, -1.1, 0.88];
 const a8	= [-0.88, -1.1, -0.88];
@@ -521,6 +529,7 @@ const programInfo =	{
 	projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
 		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
 		lightDirection: gl.getUniformLocation(shaderProgram, 'uLightDirection'),
+		ambientLight: gl.getUniformLocation(shaderProgram, 'uAmbientLight'),
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
 		uWorld: gl.getUniformLocation(shaderProgram, 'uWorld'),
 },
@@ -528,47 +537,49 @@ const programInfo =	{
 
 const texture = loadTexture(gl, 'chessBoard.jpg');
 
-const objects = [
+objects = [
 {name: 'Schachfeld', url: 'cube.obj', translation: board, color: "none"},
-{name: 'Pointer', url: 'pointer.obj', translation: getChoords([0, 1]), scale: 0.1, color: "none"},
-{name: 'Bauer1', url: 'weißerBauer.obj', translation: getChoords([0, 1]), scale: pawnScale, color: "w"},
-{name: 'Bauer2', url: 'weißerBauer.obj', translation: getChoords([1, 1]), scale: pawnScale, color: "w"},
-{name: 'Bauer3', url: 'weißerBauer.obj', translation: getChoords([2, 1]), scale: pawnScale, color: "w"},
-{name: 'Bauer4', url: 'weißerBauer.obj', translation: getChoords([3, 1]), scale: pawnScale, color: "w"},
-{name: 'Bauer5', url: 'weißerBauer.obj', translation: getChoords([4, 1]), scale: pawnScale, color: "w"},
-{name: 'Bauer6', url: 'weißerBauer.obj', translation: getChoords([5, 1]), scale: pawnScale, color: "w"},
-{name: 'Bauer7', url: 'weißerBauer.obj', translation: getChoords([6, 1]), scale: pawnScale, color: "w"},
-{name: 'Bauer8', url: 'weißerBauer.obj', translation: getChoords([7, 1]), scale: pawnScale, color: "w"},
-{name: 'Turm1', url: 'weißerTurm.obj', translation: getChoords([0, 0]), scale: pawnScale, color: "w"},
-{name: 'Turm2', url: 'weißerTurm.obj', translation: getChoords([7, 0]), scale: pawnScale, color: "w"},
-{name: 'Pferd1', url: 'weißesPferd.obj', translation: getChoords([1, 0]), scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
-{name: 'Pferd2', url: 'weißesPferd.obj', translation: getChoords([6, 0]), scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
-{name: 'Läufer1', url: 'weißerLäufer.obj', translation: getChoords([2, 0]), scale: pawnScale, color: "w"},
-{name: 'Läufer2', url: 'weißerLäufer.obj', translation: getChoords([5, 0]), scale: pawnScale, color: "w"},
-{name: 'Dame', url: 'weißeDame.obj', translation: getChoords([3, 0]), scale: pawnScale, color: "w"},
-{name: 'König', url: 'weißerKönig.obj', translation: getChoords([4, 0]), scale: pawnScale, color: "w"},
+{name: 'Pointer', url: 'pointer.obj', field: [0, 1], scale: 0.1, color: "none"},
+{name: 'Bauer1', url: 'weißerBauer.obj', field: [0, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer2', url: 'weißerBauer.obj', field: [1, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer3', url: 'weißerBauer.obj', field: [2, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer4', url: 'weißerBauer.obj', field: [3, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer5', url: 'weißerBauer.obj', field: [4, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer6', url: 'weißerBauer.obj', field: [5, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer7', url: 'weißerBauer.obj', field: [6, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer8', url: 'weißerBauer.obj', field: [7, 1], scale: pawnScale, color: "w"},
+{name: 'Turm1', url: 'weißerTurm.obj', field: [0, 0],scale: pawnScale, color: "w"},
+{name: 'Turm2', url: 'weißerTurm.obj', field: [7, 0], scale: pawnScale, color: "w"},
+{name: 'Pferd1', url: 'weißesPferd.obj', field: [1, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
+{name: 'Pferd2', url: 'weißesPferd.obj', field: [6, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
+{name: 'Läufer1', url: 'weißerLäufer.obj', field: [2, 0], scale: pawnScale, color: "w"},
+{name: 'Läufer2', url: 'weißerLäufer.obj', field: [5, 0], scale: pawnScale, color: "w"},
+{name: 'Dame', url: 'weißeDame.obj', field: [3, 0], scale: pawnScale, color: "w"},
+{name: 'König', url: 'weißerKönig.obj', field: [4, 0], scale: pawnScale, color: "w"},
 
-{name: 'Bauer1', url: 'schwarzerBauer.obj', translation: getChoords([0, 6]), scale: pawnScale, color: "b"},
-{name: 'Bauer2', url: 'schwarzerBauer.obj', translation: getChoords([1, 6]), scale: pawnScale, color: "b"},
-{name: 'Bauer3', url: 'schwarzerBauer.obj', translation: getChoords([2, 6]), scale: pawnScale, color: "b"},
-{name: 'Bauer4', url: 'schwarzerBauer.obj', translation: getChoords([3, 6]), scale: pawnScale, color: "b"},
-{name: 'Bauer5', url: 'schwarzerBauer.obj', translation: getChoords([4, 6]), scale: pawnScale, color: "b"},
-{name: 'Bauer6', url: 'schwarzerBauer.obj', translation: getChoords([5, 6]), scale: pawnScale, color: "b"},
-{name: 'Bauer7', url: 'schwarzerBauer.obj', translation: getChoords([6, 6]), scale: pawnScale, color: "b"},
-{name: 'Bauer8', url: 'schwarzerBauer.obj', translation: getChoords([7, 6]), scale: pawnScale, color: "b"},
-{name: 'Turm1', url: 'schwarzerTurm.obj', translation: getChoords([0, 7]), scale: pawnScale, color: "b"},
-{name: 'Turm2', url: 'schwarzerTurm.obj', translation: getChoords([7, 7]), scale: pawnScale, color: "b"},
-{name: 'Pferd1', url: 'schwarzesPferd.obj', translation: getChoords([6, 7]), scale: pawnScale, rotation: blackHorseRotation, color: "b"},
-{name: 'Pferd2', url: 'schwarzesPferd.obj', translation: getChoords([1, 7]), scale: pawnScale, rotation: blackHorseRotation, color: "b"},
-{name: 'Läufer1', url: 'schwarzerLäufer.obj', translation: getChoords([2, 7]), scale: pawnScale, color: "b"},
-{name: 'Läufer2', url: 'schwarzerLäufer.obj', translation: getChoords([5, 7]), scale: pawnScale, color: "b"},
-{name: 'Dame', url: 'schwarzeDame.obj', translation: getChoords([3, 7]), scale: pawnScale, color: "b"},
-{name: 'König', url: 'schwarzerKönig.obj', translation: getChoords([4, 7]), scale: pawnScale, color: "b"},
+{name: 'Bauer1', url: 'schwarzerBauer.obj', field: [0, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer2', url: 'schwarzerBauer.obj', field: [1, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer3', url: 'schwarzerBauer.obj', field: [2, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer4', url: 'schwarzerBauer.obj', field: [3, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer5', url: 'schwarzerBauer.obj', field: [4, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer6', url: 'schwarzerBauer.obj', field: [5, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer7', url: 'schwarzerBauer.obj', field: [6, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer8', url: 'schwarzerBauer.obj', field: [7, 6], scale: pawnScale, color: "b"},
+{name: 'Turm1', url: 'schwarzerTurm.obj', field: [0, 7], scale: pawnScale, color: "b"},
+{name: 'Turm2', url: 'schwarzerTurm.obj', field: [7, 7], scale: pawnScale, color: "b"},
+{name: 'Pferd1', url: 'schwarzesPferd.obj', field: [6, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
+{name: 'Pferd2', url: 'schwarzesPferd.obj', field: [1, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
+{name: 'Läufer1', url: 'schwarzerLäufer.obj', field: [2, 7], scale: pawnScale, color: "b"},
+{name: 'Läufer2', url: 'schwarzerLäufer.obj', field: [5, 7], scale: pawnScale, color: "b"},
+{name: 'Dame', url: 'schwarzeDame.obj', field: [3, 7], scale: pawnScale, color: "b"},
+{name: 'König', url: 'schwarzerKönig.obj', field: [4, 7], scale: pawnScale, color: "b"},
 ];
 
 for (let i = 0; i < objects.length; i++)	{
-loadingObject(objects[i], " wird geladen...");
-let skip = false;
+	
+	loadingObject(objects[i], " wird geladen...");
+	let skip = false;
+
 	for (let j = 0; j < i; j++)	{
 		if (objects[i].url == objects[j].url && objects[j].buffers !== undefined && objects[i].color == objects[j].color)	{
 			objects[i].buffers = objects[j].buffers;
@@ -576,9 +587,9 @@ let skip = false;
 			console.log("Skip " + objects[i].name);
 		}
 	}
-if (skip)	{
-}
-else	{
+	
+	if (skip)	{
+	} else	{
 let file = null;
 let response = await fetch(objects[i].url);
 if (response.ok)	{
@@ -586,9 +597,12 @@ if (response.ok)	{
 } else	{ alert("Ein Object konnte nicht geladen werden"); }	
 
 loadingObject(objects[i], " wird verarbeitet...");
+console.log("Verarbeitung Start");
+
 const obj = parseOBJ(file);
 
 objects[i].buffers = initBuffers(gl, obj);
+console.log("Verarbeitung Ende");
 }
 }
 
@@ -611,7 +625,11 @@ requestAnimationFrame(render);
 }
 
 document.addEventListener("keydown", function(event) 	{
-	
+	switch(event.keyCode)	{
+	case 37:
+		objects[1].translation[0] = objects[1].translation[0] -1.0;
+	}
+
 });
 
 function loadingObject(key, text)	{
