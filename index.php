@@ -611,7 +611,7 @@ document.getElementById("text").style.display = "none";
 var then = 0;
 
 function render(now)	{
-	resizeCanvasToDisplaySize(document.getElementById("c"));
+	//resizeCanvasToDisplaySize(document.getElementById("c"));
 	now *= 0.001;
 	const deltaTime = now -then;
 	then = now;
@@ -625,11 +625,20 @@ requestAnimationFrame(render);
 }
 
 document.addEventListener("keydown", function(event) 	{
+	console.log(event.keyCode);
+	let pointer = objects[1];
 	switch(event.keyCode)	{
 	case 37:
-		objects[1].translation[0] = objects[1].translation[0] -1.0;
+		assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]); return;
+	case 38:
+		assignpos(pointer, [pointer.field[0], pointer.field[1] +1]); return;
+	case 39:
+		assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]); return;
+	case 40:
+		assignpos(pointer, [pointer.field[0], pointer.field[1] -1]); return;
+	default:
+		console.log("No matching keyCode event");
 	}
-
 });
 
 function say(text, color)	{
@@ -641,6 +650,13 @@ function say(text, color)	{
 	else if(color !== undefined)	{t.style.color = color;}
 	else				{t.style.color = "BLACK";}
 	t.textContent = text;
+}
+function assignpos(obj, pos)	{
+	if (pos[0] < 0)	{pos[0] = 0;}
+	if (pos[0] > 7) {pos[0] = 7;}
+	if (pos[1] < 0)	{pos[1] = 0;}
+	if (pos[1] > 7)	{pos[1] = 7;}
+	obj.field = pos;
 }
 function sleep(ms) {
 	  return new Promise(resolve => setTimeout(resolve, ms));
