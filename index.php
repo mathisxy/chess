@@ -1,30 +1,32 @@
 <!DOCTYPE html>
 <style>
 body	{
-position: absolute;
-top: 0;
-bottom: 0;
-left: 0;
-right: 0;
-height: 100%;
-margin: 0;
-background-color: #333;
+background-color: black;
 }
 
 #c	{
 width: 1280px;
 height: 720px;
-display: block;
+}
+#loadingInfo p {
+display: absolute;
+top: 50%;
+left: 50%;
+font-size: 36px;
+background-color: grey;
+text-align: center;
 }
 </style>
 
 <body>
-
+<div id="loadingInfo">
+</div>
 <canvas width="1280" height="720" id="c"></canvas>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js">
 </script>
 <script>
+
 
 function resizeCanvasToDisplaySize(canvas)	{
 	const width = canvas.clientWidth;
@@ -127,100 +129,58 @@ function isPowerOf2(value)	{
 	return (value & (value -1)) == 0;
 }
 
-function initBuffers(gl)	{
+function initBuffers(gl, obj)	{
 	const positionBuffer = gl.createBuffer();
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-	const positions = [
-		-1.0, -0.2, 1.0,
-		1.0, -0.2, 1.0,
-		1.0, 0.0, 1.0,
-		-1.0, 0.0, 1.0,
-
-
-		-1.0, -0.2, -1.0,
-		-1.0, 0.0, -1.0,
-		1.0, 0.0, -1.0,
-		1.0, -0.2, -1.0,
-
-
-		-1.0, 0.0, -1.0,
-		-1.0, 0.0, 1.0,
-		1.0, 0.0, 1.0,
-		1.0, 0.0, -1.0,
-
-		
-		-1.0, -0.2, -1.0,
-		1.0, -0.2, -1.0,
-		1.0, -0.2, 1.0,
-		-1.0, -0.2, 1.0,
-
-
-		1.0, -0.2, -1.0,
-		1.0, 0.0, -1.0,
-		1.0, 0.0, 1.0, 
-		1.0, -0.2, 1.0,
-
-		-1.0, -0.2, -1.0,
-		-1.0, -0.2, 1.0,
-		-1.0, 0.0, 1.0, 
-		-1.0, 0.0, -1.0,
-	];
-
 	gl.bufferData(gl.ARRAY_BUFFER,
-		new Float32Array(positions),
+		new Float32Array(obj.positions),
 		gl.STATIC_DRAW);
 
 	const textureCoordBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 
-	const fillMapping = [
-
-		0.0, 0.0,
-		1.0, 0.0,
-		1.0, 1.0,
-		0.0, 1.0,
-	];
-
-	var textureCoordinates = [];
-
-	for (var i = 0; i < 6; i++)	{
-
-		for(var j = 0; j < fillMapping.length; j++)	{
-
-			textureCoordinates.push(fillMapping[j]);
-		}
-	}
-	console.log(textureCoordinates);
-
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates),
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(obj.texcoords),
 		gl.STATIC_DRAW);
+
+
+	const normalBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+
+	const normals = [];
+
+	gl.bufferData(gl.ARRAY_BUFFER, 
+		new Float32Array(obj.normals), gl.STATIC_DRAW);
 
 	const indexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-	const indices = [
-		0, 1, 2,	0, 2, 3,
-		4, 5, 6,	4, 6, 7,
-		8, 9, 10,	8, 10, 11,
-		12, 13, 14,	12, 14, 15,
-		16, 17, 18,	16, 18, 19,
-		20, 21, 22,	20, 22, 23,
-	];
-
+	const indices = count(0, maxPolyCount);
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
-		new Uint16Array(indices), gl.STATIC_DRAW);
+		new Uint16Array(indices),
+		gl.STATIC_DRAW);
 
 	return {
 		position: positionBuffer,
 		textureCoord: textureCoordBuffer,
 		indices: indexBuffer,
+		normals: normalBuffer,
 	};
 
 }
 
-function drawScene(gl, programInfo, buffers, texture, deltaTime)	{
+function count(begin, end)	{
+
+	let arr = [];
+	for (let i = begin; i <= end; i++)	{
+		arr.push(i);
+	}
+	return arr;
+}
+
+function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
+
 	gl.clearColor(0.5, 0.0, 0.0, 1.0);
 	gl.clearDepth(1.0);
 	gl.enable(gl.DEPTH_TEST);
@@ -240,28 +200,58 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime)	{
 		zNear,
 		zFar);
 
-	const modelViewMatrix = mat4.create();
-
-	mat4.translate(modelViewMatrix,
-		modelViewMatrix,
-		[-0.0, -1.3, -3.0]);
-
-	mat4.rotate(modelViewMatrix,
-		modelViewMatrix,
-		cubeRotation * 0.0,
-		[0, 1, 0]);
-
 	mat4.rotate(projectionMatrix,
 		projectionMatrix,
-		0.3,
+		cameraView.angle,
 		[1, 0, 0]);
+
+	mat4.rotate(projectionMatrix,
+			projectionMatrix,
+			cameraView.rotation,
+			[0, 1, 0]);
+	mat4.translate(projectionMatrix,
+			projectionMatrix,
+			cameraView.translation);
+	mat4.rotate(projectionMatrix,
+		projectionMatrix,
+		cameraView.sceneRotation,
+		[0, 1, 0]);
+
+
+
+	for (let i = 0; i< objects.length; i++) {
+
+	const modelViewMatrix = mat4.create();
+
+	if (objects[i].translation !== undefined)	{
+	mat4.translate(modelViewMatrix,
+		modelViewMatrix,
+		objects[i].translation);
+	}
+	if (objects[i].name == "Pointer")	{
+	mat4.rotate(modelViewMatrix,
+		modelViewMatrix,
+		pointerRotation * 0.3,
+		[0, 1, 0]);
+	}
+	if (objects[i].rotation !== undefined)	{
+	mat4.rotate(modelViewMatrix,
+		modelViewMatrix,
+		objects[i].rotation,
+		[0, 1, 0]);
+	}
+	if (objects[i].scale !== undefined)	{
+	mat4.scale(modelViewMatrix,
+		modelViewMatrix,
+		[objects[i].scale, objects[i].scale, objects[i].scale]);
+	}
 	{
 		const numComponents = 3;
 		const type = gl.FLOAT;
 		const normalize = false;
 		const stride = 0;
 		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+		gl.bindBuffer(gl.ARRAY_BUFFER, objects[i].buffers.position);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.vertexPosition,
 			numComponents,
@@ -273,6 +263,24 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime)	{
 			programInfo.attribLocations.vertexPosition);
 
 	}
+	
+	{
+		const numComponents = 3;
+		const type = gl.FLOAT;
+		const normalize = false;
+		const stride = 0;
+		const offset = 0;
+		gl.bindBuffer(gl.ARRAY_BUFFER, objects[i].buffers.normals);
+		gl.vertexAttribPointer(
+			programInfo.attribLocations.vertexNormal,
+			numComponents,
+			type,
+			normalize,
+			stride,
+			offset);
+		gl.enableVertexAttribArray(
+			programInfo.attribLocations.vertexNormal);
+	}
 
 	{
 		const numComponents = 2;
@@ -280,7 +288,7 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime)	{
 		const normalize = false;
 		const stride = 0;
 		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, buffers.textureCoord);
+		gl.bindBuffer(gl.ARRAY_BUFFER, objects[i].buffers.textureCoord);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.textureCoord,
 			numComponents,
@@ -292,7 +300,7 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime)	{
 			programInfo.attribLocations.textureCoord);
 	}
 
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, objects[i].buffers.indices);
 
 
 	gl.useProgram(programInfo.program);
@@ -312,42 +320,185 @@ function drawScene(gl, programInfo, buffers, texture, deltaTime)	{
 
 	gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
+	gl.uniform3fv(programInfo.uniformLocations.lightDirection, lightDirection);
+
 	{
 		const offset = 0;
-		const vertexCount = 36;
+		const vertexCount = maxPolyCount;
 		const type = gl.UNSIGNED_SHORT;
 		gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
 	}
+	}
 
-	cubeRotation += deltaTime;
+	cameraView.sceneRotation += 0.1 * deltaTime;
+	pointerRotation += deltaTime;
 }
+
+function parseOBJ(text)	{
+
+	const objPositions = [[0, 0, 0]];
+	const objTexcoords = [[0, 0]];
+	const objNormals = [[0, 0, 0]];
+
+	const objVertexData = [
+		objPositions,
+		objTexcoords,
+		objNormals,
+	];
+
+	let webglVertexData = [
+		[],
+		[],
+		[],
+	];
+
+	let material = "none";
+
+
+	const keywordRE = /(\w*)(?: )/;
+	const lines = text.split("\n");
+	for (let lineNr = 0; lineNr < lines.length; ++lineNr)	{
+		const line = lines[lineNr].trim();
+		if (line === '' || line.startsWith('#'))	{
+			continue;
+		}
+		const parts = line.split(/\s+/);
+		const m = keywordRE.exec(line);
+		if(!m)	{
+			continue;
+		}
+		const keyword = parts[0];
+		parts.shift();
+		switch(keyword)	{
+		case 'o':
+			break;
+		case 'v':
+			objPositions.push(v(parts));
+			break;
+		case 'vt':
+			objTexcoords.push(vt(parts));
+			break;
+		case 'vn':
+			objNormals.push(vn(parts));
+			break;
+		case 'usemtl':
+			material = parts[0];
+			break;
+		case 'f':
+			if (parts.length == 3)	{
+			for (let i = 0; i < 3; i++)	{
+				let arr = f3(parts[i]);
+				assign(arr);
+			}
+			}
+			else if (parts.length == 4)	{
+			for (let i = 0; i < 3; i++)	{
+				assign(f3(parts[i]));
+				
+			}
+			assign(f3(parts[0]));
+			assign(f3(parts[2]));
+			assign(f3(parts[3]));
+			}
+			break;
+		default:
+			console.log("Unhandled keyword line " + lineNr + ": " + keyword);
+		}
+
+
+	}
+	console.log(objVertexData);
+
+	return {
+		positions: webglVertexData[0],
+		texcoords: webglVertexData[1],
+		normals: webglVertexData[2],
+		material: material,
+	};
+	function assign(arr)	{
+	webglVertexData[0] = webglVertexData[0].concat(arr.position);
+	webglVertexData[1] = webglVertexData[1].concat(arr.texcoord);
+	webglVertexData[2] = webglVertexData[2].concat(arr.normal);
+	}
+	function o(parts)	{ return parts[0]; }
+	function v(parts)	{ return [parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])]; }
+	function vt(parts)	{ return [parseFloat(parts[0]), parseFloat(parts[1])]; }
+	function vn(parts)	{return [parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])]; }
+	function f3(part)	{ 
+			
+		let indices = part.split("/");
+
+		let position = 
+			objVertexData[0][indices[0]];
+		let texcoord = 
+			objVertexData[1][indices[1]];
+		let normal =
+			objVertexData[2][indices[2]];
+		
+		return {position: position, texcoord: texcoord, normal: normal};
+       	}
+	function usemtl(parts)	{ return parts[0]; }
+}
+function getChoords(pos)	{
+	return [a1[0] + pos[0]/7*(h1[0]-a1[0]), a1[1], a1[2] + pos[1]/7*(a8[2]-a1[2])]; 
+}
+
 
 const vsSource = `
 	attribute vec4 aVertexPosition;
+	attribute vec3 aVertexNormal;
 	attribute vec2 aTextureCoord;
 
 	uniform mat4 uModelViewMatrix;
 	uniform mat4 uProjectionMatrix;
 
 	varying highp vec2 vTextureCoord;
+	varying mediump vec3 vVertexNormal;
 
 	void main()     {
 	gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
 	vTextureCoord = aTextureCoord;
+	vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
         }
 `;
 
 const fsSource = `
 	varying highp vec2 vTextureCoord;
+	varying mediump vec3 vVertexNormal;
 
+	uniform mediump vec3 uLightDirection;
 	uniform sampler2D uSampler;
 
 	void main()     {
-		gl_FragColor = texture2D(uSampler, vTextureCoord);
+		mediump vec3 normal = normalize(vVertexNormal);
+		mediump vec3 direction = normalize(uLightDirection);
+
+		mediump float light = dot(normal, direction);
+
+		mediump vec3 temp = texture2D(uSampler, vTextureCoord).rgb;
+		mediump vec3 clamped = temp.rgb + 0.2 - temp.rgb * 0.2;
+		gl_FragColor.rgb = (temp + 0.2 + temp *0.2) * 0.2 + max(clamped * light * 0.8, 0.0);
 	}
 `;
-var cubeRotation = 0.0;
-function main()	{
+var pointerRotation = 0.0;
+var lightDirection = [1.3, 0.7, -1.0];
+var cameraView = {
+	angle: 0.45,
+	rotation: 0,
+	translation: [0, 0, -2.5],
+	sceneRotation: 0.0,
+}
+const a1	= [-0.88, -1.1, 0.88];
+const h1 	= [0.88, -1.1, 0.88];
+const a8	= [-0.88, -1.1, -0.88];
+const board 	= [0.0, -1.2, 0.0];
+const pawnScale = 0.24;
+const whiteHorseRotation = 0.7854 *2;
+const blackHorseRotation = 2.3562 *2;
+const maxPolyCount = 13000;
+
+	
+async function main()	{
 const canvas = document.querySelector("#c");
 
 const gl = canvas.getContext("webgl2");
@@ -361,34 +512,125 @@ const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
 
 const programInfo =	{
 	program: shaderProgram,
-		attribLocations:	{
+	attribLocations:	{
 		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+		vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
 		textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
 },
 	uniformLocations:	{
 	projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
 		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+		lightDirection: gl.getUniformLocation(shaderProgram, 'uLightDirection'),
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+		uWorld: gl.getUniformLocation(shaderProgram, 'uWorld'),
 },
 };
 
-const buffers = initBuffers(gl);
-
 const texture = loadTexture(gl, 'chessBoard.jpg');
+
+const objects = [
+{name: 'Schachfeld', url: 'cube.obj', translation: board, color: "none"},
+{name: 'Pointer', url: 'pointer.obj', translation: getChoords([0, 1]), scale: 0.1, color: "none"},
+{name: 'Bauer1', url: 'weißerBauer.obj', translation: getChoords([0, 1]), scale: pawnScale, color: "w"},
+{name: 'Bauer2', url: 'weißerBauer.obj', translation: getChoords([1, 1]), scale: pawnScale, color: "w"},
+{name: 'Bauer3', url: 'weißerBauer.obj', translation: getChoords([2, 1]), scale: pawnScale, color: "w"},
+{name: 'Bauer4', url: 'weißerBauer.obj', translation: getChoords([3, 1]), scale: pawnScale, color: "w"},
+{name: 'Bauer5', url: 'weißerBauer.obj', translation: getChoords([4, 1]), scale: pawnScale, color: "w"},
+{name: 'Bauer6', url: 'weißerBauer.obj', translation: getChoords([5, 1]), scale: pawnScale, color: "w"},
+{name: 'Bauer7', url: 'weißerBauer.obj', translation: getChoords([6, 1]), scale: pawnScale, color: "w"},
+{name: 'Bauer8', url: 'weißerBauer.obj', translation: getChoords([7, 1]), scale: pawnScale, color: "w"},
+{name: 'Turm1', url: 'weißerTurm.obj', translation: getChoords([0, 0]), scale: pawnScale, color: "w"},
+{name: 'Turm2', url: 'weißerTurm.obj', translation: getChoords([7, 0]), scale: pawnScale, color: "w"},
+{name: 'Pferd1', url: 'weißesPferd.obj', translation: getChoords([1, 0]), scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
+{name: 'Pferd2', url: 'weißesPferd.obj', translation: getChoords([6, 0]), scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
+{name: 'Läufer1', url: 'weißerLäufer.obj', translation: getChoords([2, 0]), scale: pawnScale, color: "w"},
+{name: 'Läufer2', url: 'weißerLäufer.obj', translation: getChoords([5, 0]), scale: pawnScale, color: "w"},
+{name: 'Dame', url: 'weißeDame.obj', translation: getChoords([3, 0]), scale: pawnScale, color: "w"},
+{name: 'König', url: 'weißerKönig.obj', translation: getChoords([4, 0]), scale: pawnScale, color: "w"},
+
+{name: 'Bauer1', url: 'schwarzerBauer.obj', translation: getChoords([0, 6]), scale: pawnScale, color: "b"},
+{name: 'Bauer2', url: 'schwarzerBauer.obj', translation: getChoords([1, 6]), scale: pawnScale, color: "b"},
+{name: 'Bauer3', url: 'schwarzerBauer.obj', translation: getChoords([2, 6]), scale: pawnScale, color: "b"},
+{name: 'Bauer4', url: 'schwarzerBauer.obj', translation: getChoords([3, 6]), scale: pawnScale, color: "b"},
+{name: 'Bauer5', url: 'schwarzerBauer.obj', translation: getChoords([4, 6]), scale: pawnScale, color: "b"},
+{name: 'Bauer6', url: 'schwarzerBauer.obj', translation: getChoords([5, 6]), scale: pawnScale, color: "b"},
+{name: 'Bauer7', url: 'schwarzerBauer.obj', translation: getChoords([6, 6]), scale: pawnScale, color: "b"},
+{name: 'Bauer8', url: 'schwarzerBauer.obj', translation: getChoords([7, 6]), scale: pawnScale, color: "b"},
+{name: 'Turm1', url: 'schwarzerTurm.obj', translation: getChoords([0, 7]), scale: pawnScale, color: "b"},
+{name: 'Turm2', url: 'schwarzerTurm.obj', translation: getChoords([7, 7]), scale: pawnScale, color: "b"},
+{name: 'Pferd1', url: 'schwarzesPferd.obj', translation: getChoords([6, 7]), scale: pawnScale, rotation: blackHorseRotation, color: "b"},
+{name: 'Pferd2', url: 'schwarzesPferd.obj', translation: getChoords([1, 7]), scale: pawnScale, rotation: blackHorseRotation, color: "b"},
+{name: 'Läufer1', url: 'schwarzerLäufer.obj', translation: getChoords([2, 7]), scale: pawnScale, color: "b"},
+{name: 'Läufer2', url: 'schwarzerLäufer.obj', translation: getChoords([5, 7]), scale: pawnScale, color: "b"},
+{name: 'Dame', url: 'schwarzeDame.obj', translation: getChoords([3, 7]), scale: pawnScale, color: "b"},
+{name: 'König', url: 'schwarzerKönig.obj', translation: getChoords([4, 7]), scale: pawnScale, color: "b"},
+];
+
+for (let i = 0; i < objects.length; i++)	{
+loadingObject(objects[i], " wird geladen...");
+let skip = false;
+	for (let j = 0; j < i; j++)	{
+		if (objects[i].url == objects[j].url && objects[j].buffers !== undefined && objects[i].color == objects[j].color)	{
+			objects[i].buffers = objects[j].buffers;
+			skip = true;
+			console.log("Skip " + objects[i].name);
+		}
+	}
+if (skip)	{
+}
+else	{
+let file = null;
+let response = await fetch(objects[i].url);
+if (response.ok)	{
+	file = await response.text();
+} else	{ alert("Ein Object konnte nicht geladen werden"); }	
+
+loadingObject(objects[i], " wird verarbeitet...");
+const obj = parseOBJ(file);
+
+objects[i].buffers = initBuffers(gl, obj);
+}
+}
+
+loadingObject(false, "");
 
 var then = 0;
 
 function render(now)	{
+	resizeCanvasToDisplaySize(document.getElementById("c"));
 	now *= 0.001;
 	const deltaTime = now -then;
 	then = now;
 
-	drawScene(gl, programInfo, buffers, texture, deltaTime);
+	drawScene(gl, programInfo, objects, texture, deltaTime, cameraView);
 
 	requestAnimationFrame(render);
 }
 requestAnimationFrame(render);
 
+}
+
+document.addEventListener("keydown", function(event) 	{
+	
+});
+
+function loadingObject(key, text)	{
+	console.log(key);
+	let div = document.getElementById("loadingInfo");
+	console.log(div.firstChild);
+	if (div.firstChild)	{
+		div.removeChild(div.firstChild);
+		if (key == false)	{
+			return;;
+		}
+	}
+
+	let p = document.createElement("p");
+	if (key.color == "w")	{
+		p.style.color = "WHITE";
+	} else {p.style.color = "BLACK";}
+	p.textContent = key.name + text;
+	div.appendChild(p);
 }
 
 main();
