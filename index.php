@@ -8,7 +8,7 @@ background-color: black;
 width: 1280px;
 height: 720px;
 }
-#loadingInfo p {
+#text {
 display: absolute;
 top: 50%;
 left: 50%;
@@ -20,6 +20,7 @@ text-align: center;
 
 <body>
 <div id="loadingInfo">
+<div id="text">Willkommen</div>
 </div>
 <canvas width="1280" height="720" id="c"></canvas>
 
@@ -421,9 +422,9 @@ function parseOBJ(text)	{
 		material: material,
 	};
 	function assign(arr)	{
-	webglVertexData[0] = webglVertexData[0].concat(arr.position);
-	webglVertexData[1] = webglVertexData[1].concat(arr.texcoord);
-	webglVertexData[2] = webglVertexData[2].concat(arr.normal);
+	webglVertexData[0].push(arr.position[0], arr.position[1], arr.position[2]);
+	webglVertexData[1].push(arr.texcoord[0], arr.texcoord[1]);
+	webglVertexData[2].push(arr.normal[0], arr.normal[1], arr.normal[2]);
 	}
 	function o(parts)	{ return parts[0]; }
 	function v(parts)	{ return [parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])]; }
@@ -577,7 +578,7 @@ objects = [
 
 for (let i = 0; i < objects.length; i++)	{
 	
-	loadingObject(objects[i], " wird geladen...");
+	say(objects[i].name + " wird geladen...", objects[i].color);
 	let skip = false;
 
 	for (let j = 0; j < i; j++)	{
@@ -594,10 +595,11 @@ let file = null;
 let response = await fetch(objects[i].url);
 if (response.ok)	{
 	file = await response.text();
+	document.getElementById("text").textContent = objects[i].name + " wird verarbeitet...";
 } else	{ alert("Ein Object konnte nicht geladen werden"); }	
 
-loadingObject(objects[i], " wird verarbeitet...");
-console.log("Verarbeitung Start");
+await say( objects[i].name + " wird verarbeitet...", objects[i].color);
+await sleep(1);
 
 const obj = parseOBJ(file);
 
@@ -605,9 +607,7 @@ objects[i].buffers = initBuffers(gl, obj);
 console.log("Verarbeitung Ende");
 }
 }
-
-loadingObject(false, "");
-
+document.getElementById("text").style.display = "none";
 var then = 0;
 
 function render(now)	{
@@ -632,23 +632,18 @@ document.addEventListener("keydown", function(event) 	{
 
 });
 
-function loadingObject(key, text)	{
-	console.log(key);
-	let div = document.getElementById("loadingInfo");
-	console.log(div.firstChild);
-	if (div.firstChild)	{
-		div.removeChild(div.firstChild);
-		if (key == false)	{
-			return;;
-		}
-	}
+function say(text, color)	{
+	console.log(text);
 
-	let p = document.createElement("p");
-	if (key.color == "w")	{
-		p.style.color = "WHITE";
-	} else {p.style.color = "BLACK";}
-	p.textContent = key.name + text;
-	div.appendChild(p);
+	let t = document.getElementById("text");
+	if (color == "w")	{	t.style.color = "WHITE";} 
+	else if(color == "b")		{t.style.color = "BLACK";}
+	else if(color !== undefined)	{t.style.color = color;}
+	else				{t.style.color = "BLACK";}
+	t.textContent = text;
+}
+function sleep(ms) {
+	  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 main();
