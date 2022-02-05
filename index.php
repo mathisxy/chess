@@ -217,10 +217,18 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 		projectionMatrix,
 		cameraView.sceneRotation,
 		[0, 1, 0]);
+	mat4.rotate(projectionMatrix,
+		projectionMatrix,
+		cameraView.sceneAngle,
+		[1, 0, 0]);
 
 
 
 	for (let i = 0; i< objects.length; i++) {
+
+	if (objects[i].striked)	{
+		continue;
+	}
 
 	if (objects[i].field !== undefined)	{
 		objects[i].translation = getChoords(objects[i].field);
@@ -336,7 +344,9 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	}
 	}
 
-	cameraView.sceneRotation += 0.1 * deltaTime;
+	if (sceneRotation)	{
+		cameraView.sceneRotation += 0.1 * deltaTime * sceneRotationDirection;
+	}
 	pointerRotation += deltaTime;
 }
 
@@ -449,6 +459,38 @@ function getChoords(pos)	{
 	return [a1[0] + pos[0]/7*(h1[0]-a1[0]), a1[1], a1[2] + pos[1]/7*(a8[2]-a1[2])]; 
 }
 
+function toggleView(color)	{
+	if (color == "w")	{
+		cameraView.sceneRotation = 0.0;
+		whiteView = true;
+	}
+	else if (color == "b")	{
+		cameraView.sceneRotation = 3.141;
+		whiteView = false;
+	}
+}
+function toggleSceneRotation()	{
+	if (sceneRotation)	{
+		sceneRotation = false;
+	}
+	else	{
+		deltaTime = 0.0;
+		sceneRotation = true;
+	}
+}
+function toggleSceneAngle(nr)	{
+	if (nr == 1)	{
+		let sceneRotationTemp = cameraView.sceneRotation;
+		cameraView = cameraView1;
+		cameraView.sceneRotation = sceneRotationTemp;
+	}
+	else	{
+		let sceneRotationTemp = cameraView.sceneRotation;
+		cameraView = cameraView2;
+		cameraView.sceneRotation = sceneRotationTemp;
+	}
+}
+
 
 const vsSource = `
 	attribute vec4 aVertexPosition;
@@ -495,8 +537,30 @@ var cameraView = {
 	rotation: 0,
 	translation: [0, 0, -2.5],
 	sceneRotation: 0.0,
+	sceneAngle: 0.0,
 }
 var objects = [];
+var currentFigure = null;
+var whiteView = true;
+var sceneRotation = false;
+var sceneRotationDirection = 1;
+const cameraView1 = {
+	angle: 0.45,
+	rotation: 0,
+	translation: [0, 0, -2.5],
+	sceneRotation: 0.0,
+	sceneAngle: 0.0,
+}
+const cameraView2 = {
+	angle: 0.77,
+	rotation: 0,
+	translation: [0, -1.5, -2.7],
+	sceneRotation: 0.0,
+	sceneAngle: 0.0,
+}	
+
+const sceneAngle1 = 0.45;
+const sceneAngle2 = 0.77;
 const a1	= [-0.88, -1.1, 0.88];
 const h1 	= [0.88, -1.1, 0.88];
 const a8	= [-0.88, -1.1, -0.88];
@@ -636,10 +700,73 @@ document.addEventListener("keydown", function(event) 	{
 		assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]); return;
 	case 40:
 		assignpos(pointer, [pointer.field[0], pointer.field[1] -1]); return;
+	case 32:
+		touchFigure(); return;
+	case 86:
+		if (whiteView)	{toggleView("b");} else {toggleView("w")}; return;
+	case 65:
+		toggleSceneRotation(); sceneRotationDirection = 1; return;
+	case 68:
+		toggleSceneRotation(); sceneRotationDirection = -1; return;
+	case 87:
+		toggleSceneAngle(2); return;
+	case 83:
+		toggleSceneAngle(1); return;
 	default:
 		console.log("No matching keyCode event");
 	}
 });
+
+function touchFigure()	{
+	if (currentFigure !== null)	{
+		if (currentFigure.field[0] == objects[1].field[0] && currentFigure.field[1] == objects[1].field[1])	{
+			currentFigure = null;
+		}
+		else	{
+	
+			if (matchingFigures(objects[1].field))	{
+				let farbe = "Schwarz";
+				if (getFirstMatchingFigure(objects[1].field).color == "w")	{
+					farbe = "Weiß";
+				}
+				if (confirm("Soll die Figur (" + getFirstMatchingFigure(objects[1].field).name + ") der Farbe " + farbe + " wirklich geschlagen werden?"))	{
+					let strikedPawn = getFirstMatchingFigure(objects[1].field);
+					strikedPawn.striked = true;
+					assignpos(currentFigure, objects[1].field);
+					currentFigure = null;
+				}
+			}
+			else	{
+				assignpos(currentFigure, objects[1].field);
+				currentFigure = null;
+			}
+		}
+		return;
+	}
+	if (matchingFigures(objects[1].field))	{
+		currentFigure = getFirstMatchingFigure(objects[1].field);
+	}
+}
+function getFirstMatchingFigure(field)	{	
+	for (let i = 2; i< objects.length; i++)	{
+		if (objects[i].field !== undefined)	{
+			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1])	{
+				return objects[i];
+			}
+		}
+	}
+	return false;
+}
+function matchingFigures(field)	{
+	for (let i = 2; i< objects.length; i++) {
+		if (objects[i].field !== undefined)     {
+			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1]) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
 function say(text, color)	{
 	console.log(text);
