@@ -672,6 +672,18 @@ console.log("Verarbeitung Ende");
 }
 }
 document.getElementById("text").style.display = "none";
+
+let socket = new WebSocket("ws://mathis.party:8080");
+
+socket.onopen = function(e)     {
+	alert("Connection established");
+	alert("Sending to server");
+	socket.send("My Name is John");
+};
+socket.onmessage = function(e)	{
+	alert(e.data);
+};
+
 var then = 0;
 
 function render(now)	{
@@ -761,6 +773,7 @@ function matchingFigures(field)	{
 	for (let i = 2; i< objects.length; i++) {
 		if (objects[i].field !== undefined)     {
 			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1]) {
+				console.log("Figure Matched: " + objects[i].name);
 				return true;
 			}
 		}
