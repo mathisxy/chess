@@ -35,7 +35,7 @@ foreach($results as $session)	{
 ?>
 </ul><br><br>
 <h2>Neue Sitzung erstellen</h2>
-<form action="https://www.mathis.party/game/index.php" method="get">
+<form action="index.php" method="get">
 <label>Sitzungsname</label><br>
 <input type="text" name="session_name" required><br>
 <label>Farbe</label><br>
