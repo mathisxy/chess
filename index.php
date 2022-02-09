@@ -1,5 +1,6 @@
 <script>
 var full = false;
+var field = "";
 function createSession()        {
         let req = new XMLHttpRequest;
 
@@ -37,7 +38,7 @@ function playerJoined()		{
 			alert(req.response);
 			full = true;		
 		}
-        }
+        } 
                 req.withCredentials = true;
                 req.send();
 }
@@ -100,6 +101,7 @@ else if (isset($_GET['joinSession']))	{
 	}
 	else	{
 		echo "<script>alert('Die Sitzung ist leider schon voll');</script>";
+		exit;
 	}
 
 	echo "<script>joinSession();</script>";
@@ -685,6 +687,11 @@ const maxPolyCount = 13000;
 
 	
 async function main()	{
+
+	if (typeof whiteView === 'undefined')	{
+		alert("Bitte die Lobby verwenden um einem Spiel beizutreten");
+		window.location.replace("lobby.php");
+	}
 const canvas = document.querySelector("#c");
 
 const gl = canvas.getContext("webgl2");
@@ -785,7 +792,7 @@ console.log("Verarbeitung Ende");
 }
 }
 
-document.getElementById("text").style.display = "Warte auf 2. Spieler...";
+document.getElementById("text").textContent = "Warte auf 2. Spieler...";
 
 while (true)	{
 	if (full)	{
@@ -803,13 +810,16 @@ else	{
 	toggleView("b");
 }
 
-if (
-document.getElementById("text"),style.display = "
 
 var then = 0;
 
+field = getCookie("session_field");
+console.log(field);
+
 function render(now)	{
-	//resizeCanvasToDisplaySize(document.getElementById("c"));
+
+	field = getCookie("session_field");
+	console.log(field);
 	now *= 0.001;
 	const deltaTime = now -then;
 	then = now;
@@ -926,6 +936,16 @@ function assignpos(obj, pos)	{
 }
 function sleep(ms) {
 	  return new Promise(resolve => setTimeout(resolve, ms));
+}
+function getCookie(cName) {
+	const name = cName + "=";
+	const cDecoded = decodeURIComponent(document.cookie); //to be careful
+	const cArr = cDecoded .split('; ');
+	let res;
+	cArr.forEach(val => {
+	if (val.indexOf(name) === 0) res = val.substring(name.length);
+	})
+		return res;
 }
 
 main();
