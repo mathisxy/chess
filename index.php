@@ -82,7 +82,22 @@ function getUpdate()	{
 }
 </script>
 <?php
-
+if (isset($_GET['nl']))	{
+	echo "<script>";
+	echo "var whiteView = true;";
+ 	$field = "2;3;4;5;6;4;3;2;" .
+      		"1;1;1;1;1;1;1;1;" .
+		"0;0;0;0;0;0;0;0;" .
+		"0;0;0;0;0;0;0;0;" .
+		"0;0;0;0;0;0;0;0;" .
+		"0;0;0;0;0;0;0;0;" .
+                 "7;7;7;7;7;7;7;7;" .
+		 "8;9;10;11;12;10;9;8;";	
+	setcookie("session_field", $field);
+	echo "field = textToArr('$field');";
+	echo "</script>";
+}
+else	{
 include("dbConnect.php");
 if (isset($_GET['createSession']))      {
 
@@ -95,7 +110,7 @@ if (isset($_GET['createSession']))      {
 
 	setcookie("session_id", $id);
 	setcookie("session_name", $sessionName);
-	setcookie("session_playerColor", $playerColor);
+	setcookie("session_color", $playerColor);
 	setcookie("session_turn", $turn);
       
         echo "<script>";
@@ -106,7 +121,7 @@ if (isset($_GET['createSession']))      {
 	else	{
 		echo "var whiteView = false;\n";
 	}
-	echo "var color = '$playerColor';";
+
         echo "</script>";
 }
 else if (isset($_GET['joinSession']))	{
@@ -144,6 +159,7 @@ else if (isset($_GET['joinSession']))	{
 
 	echo "<script>joinSession();</script>";
 
+}
 }
 
 
