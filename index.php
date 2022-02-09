@@ -42,6 +42,44 @@ function playerJoined()		{
                 req.withCredentials = true;
                 req.send();
 }
+function submitTurn()	{
+
+	document.cookie = "session_field=" + arrToText(field);
+	let req = new XMLHttpRequest;
+
+	req.open('GET', 'server.php?op=submitTurn', false);
+
+        req.onload = function() {
+                console.log(req.response);
+		if (!req.response.includes("Error"))    {
+			alert(req.response);
+		}
+		else	{
+			alert(req.response);
+		}
+        }
+      	req.withCredentials = true;
+	req.send();
+}
+function getUpdate()	{
+
+	let req = new XMLHttpRequest;
+
+	        req.open('GET', 'server.php?op=getUpdate', false);
+
+        req.onload = function() {
+                console.log(req.response);
+                if (!req.response.includes("false"))    {
+                        console.log(req.response);
+                }
+                else    {
+			alert(req.response);
+			field = textToArray(getCookie("session_field"));
+                }
+        }
+        req.withCredentials = true;
+        req.send();
+}
 </script>
 <?php
 
@@ -340,38 +378,49 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 
 
 
-	for (let i = 0; i< objects.length; i++) {
-
-	if (objects[i].striked)	{
-		continue;
+	for (let i = 0; i< field.length + objects.length; i++) {
+		
+	let currentObject;
+	if (i < field.length)	{
+		if (field[i] == 0)	{
+			continue;
+		}
+		else	{
+			currentObject = figures[field[i]];
+			currentObject.field = getField(i);
+		}
 	}
-
-	if (objects[i].field !== undefined)	{
-		objects[i].translation = getChoords(objects[i].field);
+	else	{
+		currentObject = objects[i - field.length];
+	}	
+	
+	if (currentObject.field !== undefined)	{
+		currentObject.translation = getChoords(currentObject.field);
 	}
+	
 	const modelViewMatrix = mat4.create();
 
-	if (objects[i].translation !== undefined)	{
+	if (currentObject.translation !== undefined)	{
 	mat4.translate(modelViewMatrix,
 		modelViewMatrix,
-		objects[i].translation);
+		currentObject.translation);
 	}
-	if (objects[i].name == "Pointer")	{
+	if (currentObject.name == "Pointer")	{
 	mat4.rotate(modelViewMatrix,
 		modelViewMatrix,
 		pointerRotation * 0.3,
 		[0, 1, 0]);
 	}
-	if (objects[i].rotation !== undefined)	{
+	if (currentObject.rotation !== undefined)	{
 	mat4.rotate(modelViewMatrix,
 		modelViewMatrix,
-		objects[i].rotation,
+		currentObject.rotation,
 		[0, 1, 0]);
 	}
-	if (objects[i].scale !== undefined)	{
+	if (currentObject.scale !== undefined)	{
 	mat4.scale(modelViewMatrix,
 		modelViewMatrix,
-		[objects[i].scale, objects[i].scale, objects[i].scale]);
+		[currentObject.scale, currentObject.scale, currentObject.scale]);
 	}
 	{
 		const numComponents = 3;
@@ -379,7 +428,7 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 		const normalize = false;
 		const stride = 0;
 		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, objects[i].buffers.position);
+		gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.position);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.vertexPosition,
 			numComponents,
@@ -398,7 +447,7 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 		const normalize = false;
 		const stride = 0;
 		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, objects[i].buffers.normals);
+		gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.normals);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.vertexNormal,
 			numComponents,
@@ -416,7 +465,7 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 		const normalize = false;
 		const stride = 0;
 		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, objects[i].buffers.textureCoord);
+		gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.textureCoord);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.textureCoord,
 			numComponents,
@@ -428,7 +477,7 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 			programInfo.attribLocations.textureCoord);
 	}
 
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, objects[i].buffers.indices);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, currentObject.buffers.indices);
 
 
 	gl.useProgram(programInfo.program);
@@ -656,7 +705,7 @@ var cameraView = {
 	sceneAngle: 0.0,
 }
 var objects = [];
-var currentFigure = null;
+var activeField = null;
 var sceneRotation = false;
 var sceneRotationDirection = 1;
 const cameraView1 = {
@@ -725,71 +774,49 @@ const texture = loadTexture(gl, 'chessBoard.jpg');
 objects = [
 {name: 'Schachfeld', url: 'cube.obj', translation: board, color: "none"},
 {name: 'Pointer', url: 'pointer.obj', field: [0, 1], scale: 0.1, color: "none"},
+];
+figures = [
+{},
 {name: 'Bauer1', id: 1, url: 'weißerBauer.obj', field: [0, 1], scale: pawnScale, color: "w"},
-{name: 'Bauer2', url: 'weißerBauer.obj', field: [1, 1], scale: pawnScale, color: "w"},
-{name: 'Bauer3', url: 'weißerBauer.obj', field: [2, 1], scale: pawnScale, color: "w"},
-{name: 'Bauer4', url: 'weißerBauer.obj', field: [3, 1], scale: pawnScale, color: "w"},
-{name: 'Bauer5', url: 'weißerBauer.obj', field: [4, 1], scale: pawnScale, color: "w"},
-{name: 'Bauer6', url: 'weißerBauer.obj', field: [5, 1], scale: pawnScale, color: "w"},
-{name: 'Bauer7', url: 'weißerBauer.obj', field: [6, 1], scale: pawnScale, color: "w"},
-{name: 'Bauer8', url: 'weißerBauer.obj', field: [7, 1], scale: pawnScale, color: "w"},
 {name: 'Turm1', id: 2, url: 'weißerTurm.obj', field: [0, 0],scale: pawnScale, color: "w"},
-{name: 'Turm2', url: 'weißerTurm.obj', field: [7, 0], scale: pawnScale, color: "w"},
 {name: 'Pferd1', id: 3, url: 'weißesPferd.obj', field: [1, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
-{name: 'Pferd2', url: 'weißesPferd.obj', field: [6, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
 {name: 'Läufer1', id: 4, url: 'weißerLäufer.obj', field: [2, 0], scale: pawnScale, color: "w"},
-{name: 'Läufer2', url: 'weißerLäufer.obj', field: [5, 0], scale: pawnScale, color: "w"},
 {name: 'Dame', id: 5, url: 'weißeDame.obj', field: [3, 0], scale: pawnScale, color: "w"},
 {name: 'König', id: 6, url: 'weißerKönig.obj', field: [4, 0], scale: pawnScale, color: "w"},
 
 {name: 'Bauer1', id: 7, url: 'schwarzerBauer.obj', field: [0, 6], scale: pawnScale, color: "b"},
-{name: 'Bauer2', url: 'schwarzerBauer.obj', field: [1, 6], scale: pawnScale, color: "b"},
-{name: 'Bauer3', url: 'schwarzerBauer.obj', field: [2, 6], scale: pawnScale, color: "b"},
-{name: 'Bauer4', url: 'schwarzerBauer.obj', field: [3, 6], scale: pawnScale, color: "b"},
-{name: 'Bauer5', url: 'schwarzerBauer.obj', field: [4, 6], scale: pawnScale, color: "b"},
-{name: 'Bauer6', url: 'schwarzerBauer.obj', field: [5, 6], scale: pawnScale, color: "b"},
-{name: 'Bauer7', url: 'schwarzerBauer.obj', field: [6, 6], scale: pawnScale, color: "b"},
-{name: 'Bauer8', url: 'schwarzerBauer.obj', field: [7, 6], scale: pawnScale, color: "b"},
 {name: 'Turm1', id: 8, url: 'schwarzerTurm.obj', field: [0, 7], scale: pawnScale, color: "b"},
-{name: 'Turm2', url: 'schwarzerTurm.obj', field: [7, 7], scale: pawnScale, color: "b"},
 {name: 'Pferd1', id: 9, url: 'schwarzesPferd.obj', field: [6, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
-{name: 'Pferd2', url: 'schwarzesPferd.obj', field: [1, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
 {name: 'Läufer1', id: 10, url: 'schwarzerLäufer.obj', field: [2, 7], scale: pawnScale, color: "b"},
-{name: 'Läufer2', url: 'schwarzerLäufer.obj', field: [5, 7], scale: pawnScale, color: "b"},
 {name: 'Dame', id: 11, url: 'schwarzeDame.obj', field: [3, 7], scale: pawnScale, color: "b"},
 {name: 'König', id: 12, url: 'schwarzerKönig.obj', field: [4, 7], scale: pawnScale, color: "b"},
 ];
 
-for (let i = 0; i < objects.length; i++)	{
-	
-	say(objects[i].name + " wird geladen...", objects[i].color);
+for (let i = 1; i < objects.length + figures.length; i++)	{
+	let curr;
+	if (i < figures.length)	{
+		curr = figures[i];
+	}
+	else	{
+		curr = objects[i - figures.length];
+	}	
+	say(curr.name + " wird geladen...", curr.color);
 	let skip = false;
 
-	for (let j = 0; j < i; j++)	{
-		if (objects[i].url == objects[j].url && objects[j].buffers !== undefined && objects[i].color == objects[j].color)	{
-			objects[i].buffers = objects[j].buffers;
-			skip = true;
-			console.log("Skip " + objects[i].name);
-		}
-	}
-	
-	if (skip)	{
-	} else	{
 let file = null;
-let response = await fetch(objects[i].url);
+let response = await fetch(curr.url);
 if (response.ok)	{
 	file = await response.text();
-	document.getElementById("text").textContent = objects[i].name + " wird verarbeitet...";
+	document.getElementById("text").textContent = curr.name + " wird verarbeitet...";
 } else	{ alert("Ein Object konnte nicht geladen werden"); }	
 
-await say( objects[i].name + " wird verarbeitet...", objects[i].color);
+await say( curr.name + " wird verarbeitet...", curr.color);
 await sleep(1);
 
 const obj = parseOBJ(file);
 
-objects[i].buffers = initBuffers(gl, obj);
+curr.buffers = initBuffers(gl, obj);
 console.log("Verarbeitung Ende");
-}
 }
 
 document.getElementById("text").textContent = "Warte auf 2. Spieler...";
@@ -813,13 +840,11 @@ else	{
 
 var then = 0;
 
-field = getCookie("session_field");
+field = textToArr(getCookie("session_field"));
 console.log(field);
 
 function render(now)	{
-
-	field = getCookie("session_field");
-	console.log(field);
+	
 	now *= 0.001;
 	const deltaTime = now -then;
 	then = now;
@@ -846,6 +871,8 @@ document.addEventListener("keydown", function(event) 	{
 		assignpos(pointer, [pointer.field[0], pointer.field[1] -1]); return;
 	case 32:
 		touchFigure(); return;
+	case 13:
+		if (getCookie("session_turn") == getCookie("session_color")) {submitTurn();} else {alert("Du bist nicht an der Reihe");} return;
 	case 86:
 		if (whiteView)	{toggleView("b");} else {toggleView("w")}; return;
 	case 65:
@@ -862,36 +889,40 @@ document.addEventListener("keydown", function(event) 	{
 });
 
 function touchFigure()	{
-	if (currentFigure !== null)	{
-		if (currentFigure.field[0] == objects[1].field[0] && currentFigure.field[1] == objects[1].field[1])	{
-			currentFigure = null;
+	if (activeField !== null)	{
+		if (activeField[0] == objects[1].field[0] && activeField[1] == objects[1].field[1])	{
+			activeField = null;
 		}
 		else	{
 	
-			if (matchingFigures(objects[1].field))	{
+			if (field[getIndex(objects[1].field)] !== "0")	{
+				console.log(field[getIndex(objects[1].field)]);
 				let farbe = "Schwarz";
-				if (getFirstMatchingFigure(objects[1].field).color == "w")	{
+				if (figures[field[getIndex(objects[1].field)]].color == "w")	{
 					farbe = "Weiß";
 				}
-				if (confirm("Soll die Figur (" + getFirstMatchingFigure(objects[1].field).name + ") der Farbe " + farbe + " wirklich geschlagen werden?"))	{
-					let strikedPawn = getFirstMatchingFigure(objects[1].field);
-					strikedPawn.striked = true;
-					assignpos(currentFigure, objects[1].field);
-					currentFigure = null;
+				if (confirm("Soll die Figur (" + figures[field[getIndex(objects[1].field)]].name + ") der Farbe " + farbe + " wirklich geschlagen werden?"))	{
+					field[getIndex(objects[1].field)] = field[getIndex(activeField)];
+					field[getIndex(activeField)] = 0;
+					activeField = null;
 				}
 			}
 			else	{
-				assignpos(currentFigure, objects[1].field);
-				currentFigure = null;
+				field[getIndex(objects[1].field)] = field[getIndex(activeField)];
+			       	field[getIndex(activeField)] = 0;
+				activeField = null;
 			}
 		}
+		console.log(field);
 		return;
 	}
-	if (matchingFigures(objects[1].field))	{
-		currentFigure = getFirstMatchingFigure(objects[1].field);
+	if (field[getIndex(objects[1].field)] !== "0")	{
+		activeField = objects[1].field;
 	}
+	console.log(field);
 }
-function getFirstMatchingFigure(field)	{	
+
+function getFirstMatchingFigureOLD(field)	{	
 	for (let i = 2; i< objects.length; i++)	{
 		if (objects[i].field !== undefined)	{
 			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1])	{
@@ -903,7 +934,7 @@ function getFirstMatchingFigure(field)	{
 	}
 	return false;
 }
-function matchingFigures(field)	{
+function matchingFiguresOLD(field)	{
 	for (let i = 2; i< objects.length; i++) {
 		if (objects[i].field !== undefined)     {
 			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1]) {
@@ -947,6 +978,25 @@ function getCookie(cName) {
 	})
 		return res;
 }
+function textToArr(text)	{
+	let arr = text.split(";");
+	arr.pop();
+	return arr;
+}
+function arrToText(arr)	{
+	let text = "";
+	for (let i = 0; i < arr.length; i++)	{
+		text = text + arr[i] + ";";
+	}
+	return arr;
+}
+function getField(i)    {
+	        return [i%8, Math.floor(i/8)];
+}
+function getIndex(arr)  {
+	        return arr[0] + arr[1]*8;
+}
+
 
 main();
 
