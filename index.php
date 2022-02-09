@@ -1,12 +1,126 @@
+<script>
+var full = false;
+function createSession()        {
+        let req = new XMLHttpRequest;
+
+        req.open('GET', 'server.php?op=createSession');
+
+	        req.onload = function() {
+			alert(req.response);
+			console.log(req.response);
+					        }
+
+	        req.withCredentials = true;
+
+	        req.send();
+}
+function joinSession()		{
+	let req = new XMLHttpRequest;
+
+	req.open('GET', 'server.php?op=joinSession', true);
+
+	req.onload = function() {
+		alert(req.response);
+		console.log(req.response);
+	}
+                req.withCredentials = true;
+                req.send();
+}
+function playerJoined()		{
+	let req = new XMLHttpRequest;
+
+	        req.open('GET', 'server.php?op=playerJoined', false);
+
+        req.onload = function() {
+		console.log(req.response);
+		if (!req.response.includes("false"))	{
+			alert(req.response);
+			full = true;		
+		}
+        }
+                req.withCredentials = true;
+                req.send();
+}
+</script>
+<?php
+
+require("dbConnect.php");
+if (isset($_GET['createSession']))      {
+
+
+        $id = uniqid(rand());
+        $sessionName = $_GET['session_name'];
+	$playerColor = $_GET['color'];
+	$turn = "white";
+
+
+	setcookie("session_id", $id);
+	setcookie("session_name", $sessionName);
+	setcookie("session_playerColor", $playerColor);
+	setcookie("session_turn", $turn);
+      
+        echo "<script>";
+	echo "createSession();\n";
+	if ($playerColor == "white")	{
+		echo "var whiteView = true;\n";
+	}
+	else	{
+		echo "var whiteView = false;\n";
+	}
+	echo "var color = '$playerColor';";
+        echo "</script>";
+}
+else if (isset($_GET['joinSession']))	{
+
+	$session_id = $_GET['session_id'];
+
+	$query = "SELECT * FROM sessions WHERE id='$session_id'";
+
+	require("dbQuery.php");
+
+	if($results == false)	{
+		echo "<script>alert('Die ausgewählte Sitzung ist leider nicht mehr verfügbar');</script>";
+		exit;
+	}
+	
+	$results = $results[0];
+
+	setcookie("session_id", $results['id']);
+	setcookie("session_name", $results['name']);
+	
+	if (!isset($results['player1']))	{
+		setcookie("session_color", "white");
+		setcookie("session_turn", true);
+		echo "<script>var whiteView = true; var color = 'white';</script>";
+	}
+	else if (!isset($results['player2']))	{
+		setcookie("session_color", "black");
+		setcookie("session_turn", false);
+		echo "<script>var whiteView = false; var color = 'black';</script>";
+	}
+	else	{
+		echo "<script>alert('Die Sitzung ist leider schon voll');</script>";
+	}
+
+	echo "<script>joinSession();</script>";
+
+}
+
+
+
+?>
+
 <!DOCTYPE html>
 <style>
 body	{
+margin: 0;
+padding: 0;
 background-color: black;
 }
 
 #c	{
-width: 1280px;
-height: 720px;
+width: 100%;
+height: calc(97vh);
 }
 #text {
 display: absolute;
@@ -541,7 +655,6 @@ var cameraView = {
 }
 var objects = [];
 var currentFigure = null;
-var whiteView = true;
 var sceneRotation = false;
 var sceneRotationDirection = 1;
 const cameraView1 = {
@@ -605,7 +718,7 @@ const texture = loadTexture(gl, 'chessBoard.jpg');
 objects = [
 {name: 'Schachfeld', url: 'cube.obj', translation: board, color: "none"},
 {name: 'Pointer', url: 'pointer.obj', field: [0, 1], scale: 0.1, color: "none"},
-{name: 'Bauer1', url: 'weißerBauer.obj', field: [0, 1], scale: pawnScale, color: "w"},
+{name: 'Bauer1', id: 1, url: 'weißerBauer.obj', field: [0, 1], scale: pawnScale, color: "w"},
 {name: 'Bauer2', url: 'weißerBauer.obj', field: [1, 1], scale: pawnScale, color: "w"},
 {name: 'Bauer3', url: 'weißerBauer.obj', field: [2, 1], scale: pawnScale, color: "w"},
 {name: 'Bauer4', url: 'weißerBauer.obj', field: [3, 1], scale: pawnScale, color: "w"},
@@ -613,16 +726,16 @@ objects = [
 {name: 'Bauer6', url: 'weißerBauer.obj', field: [5, 1], scale: pawnScale, color: "w"},
 {name: 'Bauer7', url: 'weißerBauer.obj', field: [6, 1], scale: pawnScale, color: "w"},
 {name: 'Bauer8', url: 'weißerBauer.obj', field: [7, 1], scale: pawnScale, color: "w"},
-{name: 'Turm1', url: 'weißerTurm.obj', field: [0, 0],scale: pawnScale, color: "w"},
+{name: 'Turm1', id: 2, url: 'weißerTurm.obj', field: [0, 0],scale: pawnScale, color: "w"},
 {name: 'Turm2', url: 'weißerTurm.obj', field: [7, 0], scale: pawnScale, color: "w"},
-{name: 'Pferd1', url: 'weißesPferd.obj', field: [1, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
+{name: 'Pferd1', id: 3, url: 'weißesPferd.obj', field: [1, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
 {name: 'Pferd2', url: 'weißesPferd.obj', field: [6, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
-{name: 'Läufer1', url: 'weißerLäufer.obj', field: [2, 0], scale: pawnScale, color: "w"},
+{name: 'Läufer1', id: 4, url: 'weißerLäufer.obj', field: [2, 0], scale: pawnScale, color: "w"},
 {name: 'Läufer2', url: 'weißerLäufer.obj', field: [5, 0], scale: pawnScale, color: "w"},
-{name: 'Dame', url: 'weißeDame.obj', field: [3, 0], scale: pawnScale, color: "w"},
-{name: 'König', url: 'weißerKönig.obj', field: [4, 0], scale: pawnScale, color: "w"},
+{name: 'Dame', id: 5, url: 'weißeDame.obj', field: [3, 0], scale: pawnScale, color: "w"},
+{name: 'König', id: 6, url: 'weißerKönig.obj', field: [4, 0], scale: pawnScale, color: "w"},
 
-{name: 'Bauer1', url: 'schwarzerBauer.obj', field: [0, 6], scale: pawnScale, color: "b"},
+{name: 'Bauer1', id: 7, url: 'schwarzerBauer.obj', field: [0, 6], scale: pawnScale, color: "b"},
 {name: 'Bauer2', url: 'schwarzerBauer.obj', field: [1, 6], scale: pawnScale, color: "b"},
 {name: 'Bauer3', url: 'schwarzerBauer.obj', field: [2, 6], scale: pawnScale, color: "b"},
 {name: 'Bauer4', url: 'schwarzerBauer.obj', field: [3, 6], scale: pawnScale, color: "b"},
@@ -630,14 +743,14 @@ objects = [
 {name: 'Bauer6', url: 'schwarzerBauer.obj', field: [5, 6], scale: pawnScale, color: "b"},
 {name: 'Bauer7', url: 'schwarzerBauer.obj', field: [6, 6], scale: pawnScale, color: "b"},
 {name: 'Bauer8', url: 'schwarzerBauer.obj', field: [7, 6], scale: pawnScale, color: "b"},
-{name: 'Turm1', url: 'schwarzerTurm.obj', field: [0, 7], scale: pawnScale, color: "b"},
+{name: 'Turm1', id: 8, url: 'schwarzerTurm.obj', field: [0, 7], scale: pawnScale, color: "b"},
 {name: 'Turm2', url: 'schwarzerTurm.obj', field: [7, 7], scale: pawnScale, color: "b"},
-{name: 'Pferd1', url: 'schwarzesPferd.obj', field: [6, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
+{name: 'Pferd1', id: 9, url: 'schwarzesPferd.obj', field: [6, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
 {name: 'Pferd2', url: 'schwarzesPferd.obj', field: [1, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
-{name: 'Läufer1', url: 'schwarzerLäufer.obj', field: [2, 7], scale: pawnScale, color: "b"},
+{name: 'Läufer1', id: 10, url: 'schwarzerLäufer.obj', field: [2, 7], scale: pawnScale, color: "b"},
 {name: 'Läufer2', url: 'schwarzerLäufer.obj', field: [5, 7], scale: pawnScale, color: "b"},
-{name: 'Dame', url: 'schwarzeDame.obj', field: [3, 7], scale: pawnScale, color: "b"},
-{name: 'König', url: 'schwarzerKönig.obj', field: [4, 7], scale: pawnScale, color: "b"},
+{name: 'Dame', id: 11, url: 'schwarzeDame.obj', field: [3, 7], scale: pawnScale, color: "b"},
+{name: 'König', id: 12, url: 'schwarzerKönig.obj', field: [4, 7], scale: pawnScale, color: "b"},
 ];
 
 for (let i = 0; i < objects.length; i++)	{
@@ -671,18 +784,27 @@ objects[i].buffers = initBuffers(gl, obj);
 console.log("Verarbeitung Ende");
 }
 }
+
+document.getElementById("text").style.display = "Warte auf 2. Spieler...";
+
+while (true)	{
+	if (full)	{
+		break;
+	}
+	playerJoined();
+	await sleep(1000);
+}
 document.getElementById("text").style.display = "none";
 
-let socket = new WebSocket("ws://mathis.party:8080");
+if (whiteView)	{
+	toggleView("w");
+}
+else	{
+	toggleView("b");
+}
 
-socket.onopen = function(e)     {
-	alert("Connection established");
-	alert("Sending to server");
-	socket.send("My Name is John");
-};
-socket.onmessage = function(e)	{
-	alert(e.data);
-};
+if (
+document.getElementById("text"),style.display = "
 
 var then = 0;
 
@@ -763,7 +885,9 @@ function getFirstMatchingFigure(field)	{
 	for (let i = 2; i< objects.length; i++)	{
 		if (objects[i].field !== undefined)	{
 			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1])	{
-				return objects[i];
+				if (objects[i].striked !== true)	{
+					return objects[i];
+				}
 			}
 		}
 	}
@@ -773,8 +897,10 @@ function matchingFigures(field)	{
 	for (let i = 2; i< objects.length; i++) {
 		if (objects[i].field !== undefined)     {
 			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1]) {
-				console.log("Figure Matched: " + objects[i].name);
-				return true;
+				if (objects[i].striked !== true)	{
+					console.log("Figure Matched: " + objects[i].name);
+					return true;
+				}
 			}
 		}
 	}
@@ -805,5 +931,7 @@ function sleep(ms) {
 main();
 
 </script>
+
+
 </body>
 </html>
