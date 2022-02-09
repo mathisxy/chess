@@ -83,7 +83,7 @@ function getUpdate()	{
 </script>
 <?php
 
-require("dbConnect.php");
+include("dbConnect.php");
 if (isset($_GET['createSession']))      {
 
 
@@ -115,7 +115,7 @@ else if (isset($_GET['joinSession']))	{
 
 	$query = "SELECT * FROM sessions WHERE id='$session_id'";
 
-	require("dbQuery.php");
+	include("dbQuery.php");
 
 	if($results == false)	{
 		echo "<script>alert('Die ausgewählte Sitzung ist leider nicht mehr verfügbar');</script>";
