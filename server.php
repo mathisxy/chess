@@ -135,8 +135,13 @@ function playerJoined()	{
 function submitTurn()	{
 
 	$field = $_COOKIE['session_field'];
-	$turn = $_COOKIE['session_turn'];
+	$turn = "black";
+	if ($_COOKIE['session_turn'] == "black")	{
+		$turn == "white";
+	}
 	$id = $_COOKIE['session_id'];
+
+	setcookie("session_turn", $turn);
 
 	$query = "UPDATE sessions set field='$field', turn='$turn' WHERE id='$id'";
 

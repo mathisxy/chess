@@ -821,7 +821,7 @@ console.log("Verarbeitung Ende");
 
 document.getElementById("text").textContent = "Warte auf 2. Spieler...";
 
-while (true)	{
+while (false)	{
 	if (full)	{
 		break;
 	}
