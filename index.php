@@ -872,7 +872,7 @@ document.addEventListener("keydown", function(event) 	{
 	case 32:
 		touchFigure(); return;
 	case 13:
-		if (getCookie("session_turn") == getCookie("session_color")) {submitTurn();} else {alert("Du bist nicht an der Reihe");} return;
+		if (getCookie("session_turn") == getCookie("session_color")) {submitTurn();} else {alert("Du bist nicht an der Reihe");} console.log(getCookie("session_turn") + getCookie("session_color")); return;
 	case 86:
 		if (whiteView)	{toggleView("b");} else {toggleView("w")}; return;
 	case 65:
