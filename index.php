@@ -129,12 +129,12 @@ else if (isset($_GET['joinSession']))	{
 	
 	if (!isset($results['player1']))	{
 		setcookie("session_color", "white");
-		setcookie("session_turn", true);
+		setcookie("session_turn", "white");
 		echo "<script>var whiteView = true; var color = 'white';</script>";
 	}
 	else if (!isset($results['player2']))	{
 		setcookie("session_color", "black");
-		setcookie("session_turn", false);
+		setcookie("session_turn", "white");
 		echo "<script>var whiteView = false; var color = 'black';</script>";
 	}
 	else	{
