@@ -24,6 +24,9 @@ if (isset($_COOKIE['session_name']))	{
 		case 'submitTurn':
 			submitTurn();
 			break;
+		case 'getUpdate':
+			getUpdate();
+			break;
 		default:
 			echo "Error: Operation could not be found";
 		}
@@ -54,7 +57,7 @@ function createSession()	{
 
 	require('dbQuery.php');
 
-	setcookie("session_field", $session_filed);
+	setcookie("session_field", $session_field);
 	echo "Erfolg";
 }
 
@@ -148,6 +151,28 @@ function submitTurn()	{
 	require('dbQuery.php');
 
 	echo "Erfolgreich";
+}
+
+function getUpdate()	{
+
+	$session_id = $_COOKIE['session_id'];
+	$query = "SELECT * FROM sessions WHERE id='$session_id'";
+	require('dbQuery.php');
+
+	if ($results == false)	{
+		echo "Error: Die Sitzung konnte nicht gefunden werden";
+		exit;
+	}
+	$results = $results[0];
+
+	if ($results['turn'] == $_COOKIE['session_color'])	{
+		setcookie("session_turn", $results['turn']);
+		setcookie("session_field", $results['field']);
+		echo "Update";
+	}
+	else	{
+		echo "false";
+	}
 }
 
 function initField()	{

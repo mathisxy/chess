@@ -1,6 +1,19 @@
+<meta charset="UTF-8">
 <script>
 var full = false;
 var field = "";
+function textToArr(text)        {
+	let arr = text.split(";");
+	arr.pop();
+	return arr;
+}
+function arrToText(arr) {
+	let text = "";
+	for (let i = 0; i < arr.length; i++)    {
+		text = text + arr[i] + ";";
+	}
+	return arr;
+}
 function createSession()        {
         let req = new XMLHttpRequest;
 
@@ -60,6 +73,8 @@ function submitTurn()	{
         }
       	req.withCredentials = true;
 	req.send();
+
+	getUpdate();
 }
 function getUpdate()	{
 
@@ -69,12 +84,13 @@ function getUpdate()	{
 
         req.onload = function() {
                 console.log(req.response);
-                if (!req.response.includes("false"))    {
-                        console.log(req.response);
+                if (req.response.includes("false"))    {
+			console.log(req.response);
+			//getUpdate();
                 }
                 else    {
 			alert(req.response);
-			field = textToArray(getCookie("session_field"));
+			field = textToArr(getCookie("session_field"));
                 }
         }
         req.withCredentials = true;
@@ -95,6 +111,7 @@ if (isset($_GET['nl']))	{
 		 "8;9;10;11;12;10;9;8;";	
 	setcookie("session_field", $field);
 	echo "field = textToArr('$field');";
+	echo "full = true;";
 	echo "</script>";
 }
 else	{
@@ -108,10 +125,10 @@ if (isset($_GET['createSession']))      {
 	$turn = "white";
 
 
-	setcookie("session_id", $id);
-	setcookie("session_name", $sessionName);
-	setcookie("session_color", $playerColor);
-	setcookie("session_turn", $turn);
+	setcookie("session_id", $id, time() + 36000);
+	setcookie("session_name", $sessionName, time() + 36000);
+	setcookie("session_color", $playerColor, time() + 36000);
+	setcookie("session_turn", $turn, time() + 36000);
       
         echo "<script>";
 	echo "createSession();\n";
@@ -139,8 +156,8 @@ else if (isset($_GET['joinSession']))	{
 	
 	$results = $results[0];
 
-	setcookie("session_id", $results['id']);
-	setcookie("session_name", $results['name']);
+	setcookie("session_id", $results['id'], time() +36000);
+	setcookie("session_name", $results['name'], time() +36000);
 	
 	if (!isset($results['player1']))	{
 		setcookie("session_color", "white");
@@ -837,7 +854,7 @@ console.log("Verarbeitung Ende");
 
 document.getElementById("text").textContent = "Warte auf 2. Spieler...";
 
-while (false)	{
+while (true)	{
 	if (full)	{
 		break;
 	}
@@ -851,6 +868,10 @@ if (whiteView)	{
 }
 else	{
 	toggleView("b");
+}
+
+if (getCookie("session_turn") !== getCookie("session_color"))	{
+	getUpdate();
 }
 
 
@@ -899,6 +920,8 @@ document.addEventListener("keydown", function(event) 	{
 		toggleSceneAngle(2); return;
 	case 83:
 		toggleSceneAngle(1); return;
+	case 85:
+		getUpdate(); return;
 	default:
 		console.log("No matching keyCode event");
 	}
@@ -994,18 +1017,7 @@ function getCookie(cName) {
 	})
 		return res;
 }
-function textToArr(text)	{
-	let arr = text.split(";");
-	arr.pop();
-	return arr;
-}
-function arrToText(arr)	{
-	let text = "";
-	for (let i = 0; i < arr.length; i++)	{
-		text = text + arr[i] + ";";
-	}
-	return arr;
-}
+
 function getField(i)    {
 	        return [i%8, Math.floor(i/8)];
 }
