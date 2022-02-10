@@ -6,16 +6,18 @@ function isNL()	{
 	return window.location.href.includes("nl");
 }
 function textToArr(text)        {
-	let arr = text.split(";");
-	arr.pop();
+	console.log(text);
+	let arr = text.split(",").map( Number );
+	console.log(arr);
 	return arr;
 }
 function arrToText(arr) {
-	let text = "";
-	for (let i = 0; i < arr.length; i++)    {
-		text = text + arr[i] + ";";
+	let text = arr[0];
+	for (let i = 1; i < arr.length; i++)    {
+		text = text + "," + arr[i];
 	}
-	return arr;
+	console.log(text);
+	return text;
 }
 function createSession()        {
 	if (isNL())	{
@@ -119,14 +121,14 @@ function getUpdate()	{
 if (isset($_GET['nl']))	{
 	echo "<script>";
 	echo "var whiteView = true;";
- 	$field = "2;3;4;5;6;4;3;2;" .
-      		"1;1;1;1;1;1;1;1;" .
-		"0;0;0;0;0;0;0;0;" .
-		"0;0;0;0;0;0;0;0;" .
-		"0;0;0;0;0;0;0;0;" .
-		"0;0;0;0;0;0;0;0;" .
-                 "7;7;7;7;7;7;7;7;" .
-		 "8;9;10;11;12;10;9;8;";	
+ 	 $field = "2,3,4,5,6,4,3,2," .
+	       	 "1,1,1,1,1,1,1,1," .
+		 "0,0,0,0,0,0,0,0," .
+		 "0,0,0,0,0,0,0,0," .
+		 "0,0,0,0,0,0,0,0," .
+		 "0,0,0,0,0,0,0,0," .
+		 "7,7,7,7,7,7,7,7," .
+                 "8,9,10,11,12,10,9,8";			 
 	setcookie("session_field", $field);
 	echo "field = textToArr('$field');";
 	echo "full = true;";
@@ -917,13 +919,17 @@ document.addEventListener("keydown", function(event) 	{
 	let pointer = objects[1];
 	switch(event.keyCode)	{
 	case 37:
-		assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]); return;
+		if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]);}
+		else	{assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]);} return;
 	case 38:
-		assignpos(pointer, [pointer.field[0], pointer.field[1] +1]); return;
+		if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0], pointer.field[1] +1]);}
+		else	{assignpos(pointer, [pointer.field[0], pointer.field[1] -1])}	return;
 	case 39:
-		assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]); return;
+		if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]); }
+		else	{assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]);} return;
 	case 40:
-		assignpos(pointer, [pointer.field[0], pointer.field[1] -1]); return;
+		if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0], pointer.field[1] -1]);}
+		else	{assignpos(pointer, [pointer.field[0], pointer.field[1] +1])}	return;
 	case 32:
 		touchFigure(); return;
 	case 13:
@@ -952,7 +958,7 @@ function touchFigure()	{
 		}
 		else	{
 	
-			if (field[getIndex(objects[1].field)] !== "0")	{
+			if (field[getIndex(objects[1].field)] !== 0)	{
 				console.log(field[getIndex(objects[1].field)]);
 				let farbe = "Schwarz";
 				if (figures[field[getIndex(objects[1].field)]].color == "w")	{
@@ -973,36 +979,10 @@ function touchFigure()	{
 		console.log(field);
 		return;
 	}
-	if (field[getIndex(objects[1].field)] !== "0")	{
+	if (field[getIndex(objects[1].field)] !== 0)	{
 		activeField = objects[1].field;
 	}
 	console.log(field);
-}
-
-function getFirstMatchingFigureOLD(field)	{	
-	for (let i = 2; i< objects.length; i++)	{
-		if (objects[i].field !== undefined)	{
-			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1])	{
-				if (objects[i].striked !== true)	{
-					return objects[i];
-				}
-			}
-		}
-	}
-	return false;
-}
-function matchingFiguresOLD(field)	{
-	for (let i = 2; i< objects.length; i++) {
-		if (objects[i].field !== undefined)     {
-			if (field[0] == objects[i].field[0] && field[1] == objects[i].field[1]) {
-				if (objects[i].striked !== true)	{
-					console.log("Figure Matched: " + objects[i].name);
-					return true;
-				}
-			}
-		}
-	}
-	return false;
 }
 
 function say(text, color)	{
