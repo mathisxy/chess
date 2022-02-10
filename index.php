@@ -2,6 +2,9 @@
 <script>
 var full = false;
 var field = "";
+function isNL()	{
+	return window.location.href.includes("nl");
+}
 function textToArr(text)        {
 	let arr = text.split(";");
 	arr.pop();
@@ -41,6 +44,9 @@ function joinSession()		{
                 req.send();
 }
 function playerJoined()		{
+	if (isNL())	{
+		return;
+	}
 	let req = new XMLHttpRequest;
 
 	        req.open('GET', 'server.php?op=playerJoined', false);
@@ -56,6 +62,9 @@ function playerJoined()		{
                 req.send();
 }
 function submitTurn()	{
+	if (isNL())	{
+		return;
+	}
 
 	document.cookie = "session_field=" + arrToText(field);
 	let req = new XMLHttpRequest;
@@ -77,6 +86,9 @@ function submitTurn()	{
 	getUpdate();
 }
 function getUpdate()	{
+	if (isNL())	{
+		return;
+	}
 
 	let req = new XMLHttpRequest;
 
