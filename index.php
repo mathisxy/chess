@@ -18,6 +18,9 @@ function arrToText(arr) {
 	return arr;
 }
 function createSession()        {
+	if (isNL())	{
+		return;
+	}
         let req = new XMLHttpRequest;
 
         req.open('GET', 'server.php?op=createSession');
@@ -32,6 +35,9 @@ function createSession()        {
 	        req.send();
 }
 function joinSession()		{
+	if (isNL())	{
+		return;
+	}
 	let req = new XMLHttpRequest;
 
 	req.open('GET', 'server.php?op=joinSession', true);
