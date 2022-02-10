@@ -19,22 +19,42 @@ function arrToText(arr) {
 	console.log(text);
 	return text;
 }
+function warning()	{
+	return "Soll die Sitzung gelöscht werden?"						         
+}
+function leave()	{
+	if(confirm("Die Sitzung wird durch diesen Vorgang gelöscht. Fortfahren?"))	{
+		if (confirm("Sitzung löschen?"))	{
+			destroySession();
+			window.onbeforeunload = null;
+			window.location.href = "lobby.php";
+		}
+	}
+}
+function destroySession()	{
+	let req = new XMLHttpRequest;
+
+	req.open('GET', 'server.php?op=destroySession&id=' + getCookie("session_id"), false);
+	
+	req.withCredentials = true;
+
+	req.send();
+	console.log("UNLOAD-----------------UNLOAD--------------------UNLOAD------EVENT FIRED: SESION DESTROYES");
+}
 function createSession()        {
 	if (isNL())	{
 		return;
 	}
         let req = new XMLHttpRequest;
 
-        req.open('GET', 'server.php?op=createSession');
+        req.open('GET', 'server.php?op=createSession', false);
 
 	        req.onload = function() {
-			say(req.response, getCookie("session_color"));
-			console.log(req.response);
-					        }
-
-	        req.withCredentials = true;
-
-	        req.send();
+			console.log("CREATE SESSION: " + req.response);
+		}
+	req.withCredentials = true;
+       
+	req.send();
 }
 function joinSession()		{
 	if (isNL())	{
@@ -220,11 +240,20 @@ background-color: black;
 
 #c	{
 width: 100%;
-height: calc(97vh);
+height: calc(99vh);
 }
 #text {
 position: fixed;
 top: 0;
+left: 0;
+width: 100%;
+font-size: 24px;
+background-color: grey;
+text-align: center;
+}
+#hints	{
+position: fixed;
+bottom: 0;
 left: 0;
 width: 100%;
 font-size: 18px;
@@ -233,10 +262,11 @@ text-align: center;
 }
 </style>
 
-<body>
+<body onbeforeunload="return warning()" onunload="destroySession()">
 <div id="loadingInfo">
 <div id="text">Willkommen</div>
 </div>
+<div id="hints"><b>Pfeiltasten:</b> Cursor verschieben, <b>Leertaste:</b> Figure nehmen bzw. setzen, <b>Enter:</b> Zug bestätigen, <b>awsd:</b> Kamera Steuerung, <b>u:</b> Manuelles Update, <b>h:</b> Hilfe öffnen bzw. verstecken</div>
 <canvas width="1280" height="720" id="c"></canvas>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js">
@@ -819,7 +849,6 @@ const pawnScale = 0.24;
 const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
 const maxPolyCount = 13000;
-
 	
 async function main()	{
 
@@ -859,7 +888,7 @@ const texture = loadTexture(gl, 'chessBoard.jpg');
 
 objects = [
 {name: 'Schachfeld', url: 'cube.obj', translation: board, color: "none"},
-{name: 'Pointer', url: 'pointer.obj', field: [0, 1], scale: 0.1, color: "none"},
+{name: 'Pointer', url: 'pointer.obj', field: [4, 4], scale: 0.1, color: "none"},
 ];
 figures = [
 {},
@@ -945,7 +974,6 @@ function render(now)	{
 requestAnimationFrame(render);
 
 }
-
 document.addEventListener("keydown", function(event) 	{
 	console.log(event.keyCode);
 	let pointer = objects[1];
@@ -978,6 +1006,10 @@ document.addEventListener("keydown", function(event) 	{
 		toggleSceneAngle(1); return;
 	case 85:
 		getUpdate(); return;
+	case 72:
+		if (document.getElementById("hints").style.display == "none")	{document.getElementById("hints").style.display = "block";} else {document.getElementById("hints").style.display = "none";}
+	case 27:
+		leave(); return;
 	default:
 		console.log("No matching keyCode event");
 	}
@@ -1000,6 +1032,7 @@ function touchFigure()	{
 					field[getIndex(objects[1].field)] = field[getIndex(activeField)];
 					field[getIndex(activeField)] = 0;
 					activeField = null;
+					submitTurn();
 				}
 			}
 			else	{

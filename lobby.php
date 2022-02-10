@@ -18,7 +18,7 @@ if (!isset($_COOKIE['session_playerName']))	{
 <!DOCTYPE html>
 <body>
 <h1>Lobby</h1>
-<ul>
+<ul id="sessions">
 <?php
 
 require('dbConnect.php');
@@ -46,4 +46,26 @@ foreach($results as $session)	{
 </select><br><br>
 <input type="submit" value="Sitzung erstellen">
 </form>
+
+<script>
+async function main()	{
+var sessions = document.getElementById("sessions");
+
+while (true)	{
+	req = new XMLHttpRequest();
+
+	req.open("GET", "server.php?op=listSessionsForLobby", false);
+
+	req.onload = function()	{
+		sessions.innerHTML = req.response;
+	}
+	req.send();
+	await sleep(3000);
+}
+}
+function sleep(ms) {
+	          return new Promise(resolve => setTimeout(resolve, ms));
+}
+main();
+</script>
 

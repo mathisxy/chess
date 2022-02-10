@@ -27,6 +27,12 @@ if (isset($_COOKIE['session_name']))	{
 		case 'getUpdate':
 			getUpdate();
 			break;
+		case 'destroySession':
+			destroySession();
+			break;
+		case 'listSessionsForLobby':
+			listSessionsForLobby();
+			break;
 		default:
 			echo "Error: Operation could not be found";
 		}
@@ -88,6 +94,13 @@ function joinSession()	{
 }
 function leaveSession()	{
 }
+function destroySession()	{
+
+	$id = $_GET['id'];
+	$query = "DELETE FROM sessions WHERE id='$id'";
+
+	require("dbQuery.php");
+}
 function listSessions()	{
 	$query = "SELECT * FROM sessions";
 
@@ -100,6 +113,16 @@ function listSessions()	{
 	else	{
 		echo "Keine Sessions vorhanden";
 		exit;
+	}
+}
+function listSessionsForLobby()	{
+	$query = "SELECT * FROM sessions";
+
+	require('dbQuery.php');
+
+	foreach($results as $session)   {
+
+		        echo "<li><b>" . $session['name'] . "</b><br>Player1: " . $session['player1'] . "<br>Player2: " . $session['player2'] . "<br><a href='index.php?joinSession=set&session_id=" . $session['id'] . "'>Dieser Session beitreten</a></li>";
 	}
 }
 function playerJoined()	{
@@ -150,7 +173,11 @@ function submitTurn()	{
 
 	require('dbQuery.php');
 
-	echo "Erfolgreich";
+	if ($turn == "white")	{
+		echo "Weiß ist am Zug";
+	} else	{
+		echo "Schwarz ist am Zug";
+	}
 }
 
 function getUpdate()	{
@@ -168,7 +195,7 @@ function getUpdate()	{
 	if ($results['turn'] == $_COOKIE['session_color'])	{
 		setcookie("session_turn", $results['turn']);
 		setcookie("session_field", $results['field']);
-		echo "Update";
+		echo "Du bist am Zug";
 	}
 	else	{
 		echo "false";
