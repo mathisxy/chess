@@ -28,7 +28,7 @@ function createSession()        {
         req.open('GET', 'server.php?op=createSession');
 
 	        req.onload = function() {
-			alert(req.response);
+			say(req.response, getCookie("session_color"));
 			console.log(req.response);
 					        }
 
@@ -45,7 +45,7 @@ function joinSession()		{
 	req.open('GET', 'server.php?op=joinSession', true);
 
 	req.onload = function() {
-		alert(req.response);
+		say(req.response, getCookie("session_color"));
 		console.log(req.response);
 	}
                 req.withCredentials = true;
@@ -62,7 +62,7 @@ function playerJoined()		{
         req.onload = function() {
 		console.log(req.response);
 		if (!req.response.includes("false"))	{
-			alert(req.response);
+			say(req.response, getCookie("session_color"));
 			full = true;		
 		}
         } 
@@ -81,17 +81,25 @@ function submitTurn()	{
 
         req.onload = function() {
                 console.log(req.response);
-		if (!req.response.includes("Error"))    {
+		if (req.response.includes("Error"))    {
 			alert(req.response);
 		}
 		else	{
-			alert(req.response);
+			updateLoop();
+			say(req.response, getCookie("session_color"));
 		}
         }
       	req.withCredentials = true;
 	req.send();
 
 	getUpdate();
+}
+async function updateLoop()	{
+	do	{
+		getUpdate();
+		await sleep(2000);
+	} while(getCookie("session_color") !== getCookie("session_turn"));
+	console.log(getCookie("session_color") + getCookie("session_turn"));
 }
 function getUpdate()	{
 	if (isNL())	{
@@ -103,13 +111,12 @@ function getUpdate()	{
 	        req.open('GET', 'server.php?op=getUpdate', false);
 
         req.onload = function() {
-                console.log(req.response);
                 if (req.response.includes("false"))    {
 			console.log(req.response);
 			//getUpdate();
                 }
                 else    {
-			alert(req.response);
+			say(req.response, getCookie("session_color");
 			field = textToArr(getCookie("session_field"));
                 }
         }
@@ -216,10 +223,11 @@ width: 100%;
 height: calc(97vh);
 }
 #text {
-display: absolute;
-top: 50%;
-left: 50%;
-font-size: 36px;
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+font-size: 18px;
 background-color: grey;
 text-align: center;
 }
@@ -458,10 +466,17 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 		modelViewMatrix,
 		currentObject.translation);
 	}
+	if (activeField !== null)	{
+		if (getIndex(activeField) == i)	{
+	mat4.translate(modelViewMatrix,
+		modelViewMatrix,
+		[0, 1*hoverIntensity, 0]);
+		}
+	}
 	if (currentObject.name == "Pointer")	{
 	mat4.rotate(modelViewMatrix,
 		modelViewMatrix,
-		pointerRotation * 0.3,
+		pointerRotation * 0.7,
 		[0, 1, 0]);
 	}
 	if (currentObject.rotation !== undefined)	{
@@ -566,6 +581,21 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 		cameraView.sceneRotation += 0.1 * deltaTime * sceneRotationDirection;
 	}
 	pointerRotation += deltaTime;
+	if (hoverDirection)	{
+		hoverIntensity += deltaTime * hoverSpeed;
+	}
+	else			{
+		hoverIntensity += -deltaTime * hoverSpeed;
+	}
+	if (hoverIntensity > 0.1)       {
+	       	hoverDirection = false;
+		hoverIntensity = 0.1;
+	}
+	else if (hoverIntensity <= 0)        {
+		hoverDirection = true;
+		hoverIntensity = 0.0;
+	}
+
 }
 
 function parseOBJ(text)	{
@@ -748,6 +778,9 @@ const fsSource = `
 	}
 `;
 var pointerRotation = 0.0;
+var hoverIntensity = 0.0;
+var hoverDirection = true;
+var hoverSpeed = 0.1;
 var lightDirection = [1.3, 0.7, -1.0];
 var ambientLight = [0.3, 0.2, 0.2];
 var cameraView = {
@@ -881,7 +914,6 @@ while (true)	{
 	playerJoined();
 	await sleep(1000);
 }
-document.getElementById("text").style.display = "none";
 
 if (whiteView)	{
 	toggleView("w");
@@ -891,7 +923,7 @@ else	{
 }
 
 if (getCookie("session_turn") !== getCookie("session_color"))	{
-	getUpdate();
+	updateLoop();
 }
 
 
@@ -981,6 +1013,7 @@ function touchFigure()	{
 	}
 	if (field[getIndex(objects[1].field)] !== 0)	{
 		activeField = objects[1].field;
+		hoverIntensity = 0;
 	}
 	console.log(field);
 }
