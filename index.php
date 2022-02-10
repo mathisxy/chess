@@ -116,7 +116,7 @@ function getUpdate()	{
 			//getUpdate();
                 }
                 else    {
-			say(req.response, getCookie("session_color");
+			say(req.response, getCookie("session_color"));
 			field = textToArr(getCookie("session_field"));
                 }
         }
