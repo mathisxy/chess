@@ -266,7 +266,7 @@ text-align: center;
 <div id="loadingInfo">
 <div id="text">Willkommen</div>
 </div>
-<div id="hints"><b>Pfeiltasten:</b> Cursor verschieben, <b>Leertaste:</b> Figure nehmen bzw. setzen, <b>Enter:</b> Zug bestätigen, <b>awsd:</b> Kamera Steuerung, <b>u:</b> Manuelles Update, <b>h:</b> Hilfe öffnen bzw. verstecken</div>
+<div id="hints"><b>Esc:</b> Spiel beenden, <b>Pfeiltasten:</b> Cursor verschieben, <b>Leertaste:</b> Figure nehmen bzw. setzen, <b>Enter:</b> Zug bestätigen, <b>awsd:</b> Kamera Steuerung, <b>u:</b> Manuelles Update, <b>h:</b> Hilfe öffnen bzw. verstecken</div>
 <canvas width="1280" height="720" id="c"></canvas>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js">

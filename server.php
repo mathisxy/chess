@@ -3,8 +3,12 @@
 
 require('dbConnect.php');
 
-if (isset($_COOKIE['session_name']))	{
-	if (isset($_GET['op']))	{
+if (isset($_GET['op']))	{
+	if ($_GET['op'] == 'listSessionsForLobby')	{
+		listSessionsForLobby();
+		exit;
+	}
+	if (isset($_COOKIE['session_id']))	{
 		switch($_GET['op'])	{
 		case 'createSession':
 			createSession();
@@ -30,20 +34,17 @@ if (isset($_COOKIE['session_name']))	{
 		case 'destroySession':
 			destroySession();
 			break;
-		case 'listSessionsForLobby':
-			listSessionsForLobby();
-			break;
 		default:
 			echo "Error: Operation could not be found";
 		}
 
 	}
 	else	{
-		echo "Error: No Operation defined";
+		echo "Error: Cookie not found";
 	}
 }
 else {
-	echo "Error: Cookie not found, please reload";
+	echo "Error: No Operation defined";
 }
 
 function createSession()	{
