@@ -439,6 +439,7 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	const zNear = 0.1;
 	const zFar = 100.0;
 	const projectionMatrix = mat4.create();
+	const cameraMatrix = mat4.create();
 
 	mat4.perspective(projectionMatrix,
 		fieldOfView,
@@ -458,16 +459,12 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	mat4.translate(projectionMatrix,
 			projectionMatrix,
 			cameraView.translation);
-	mat4.rotate(projectionMatrix,
-		projectionMatrix,
-		cameraView.sceneRotation,
+
+	mat4.rotate(cameraMatrix,
+		cameraMatrix,
+		sceneRotation,
 		[0, 1, 0]);
-	mat4.rotate(projectionMatrix,
-		projectionMatrix,
-		cameraView.sceneAngle,
-		[1, 0, 0]);
-
-
+	
 
 	for (let i = 0; i< field.length + objects.length; i++) {
 		
@@ -581,6 +578,10 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	gl.useProgram(programInfo.program);
 
 	gl.uniformMatrix4fv(
+		programInfo.uniformLocations.cameraMatrix,
+		false,
+		cameraMatrix);
+	gl.uniformMatrix4fv(
 		programInfo.uniformLocations.projectionMatrix,
 		false,
 		projectionMatrix);
@@ -599,6 +600,8 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 
 	gl.uniform3fv(programInfo.uniformLocations.ambientLight, ambientLight);
 
+	gl.uniform3fv(programInfo.uniformLocations.cameraPosition, cameraView.translation);
+
 	{
 		const offset = 0;
 		const vertexCount = maxPolyCount;
@@ -607,9 +610,6 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	}
 	}
 
-	if (sceneRotation)	{
-		cameraView.sceneRotation += 0.1 * deltaTime * sceneRotationDirection;
-	}
 	pointerRotation += deltaTime;
 	if (hoverDirection)	{
 		hoverIntensity += deltaTime * hoverSpeed;
@@ -739,13 +739,14 @@ function getChoords(pos)	{
 
 function toggleView(color)	{
 	if (color == "w")	{
-		cameraView.sceneRotation = 0.0;
+		sceneRotation = 0.0;
 		whiteView = true;
 	}
 	else if (color == "b")	{
-		cameraView.sceneRotation = 3.141;
+		sceneRotation = 9.424;
 		whiteView = false;
 	}
+	console.log(cameraView);
 }
 function toggleSceneRotation()	{
 	if (sceneRotation)	{
@@ -758,15 +759,14 @@ function toggleSceneRotation()	{
 }
 function toggleSceneAngle(nr)	{
 	if (nr == 1)	{
-		let sceneRotationTemp = cameraView.sceneRotation;
-		cameraView = cameraView1;
-		cameraView.sceneRotation = sceneRotationTemp;
+		cameraView.angle = cameraView1.angle;
+		cameraView.translation = cameraView1.translation;
 	}
-	else	{
-		let sceneRotationTemp = cameraView.sceneRotation;
-		cameraView = cameraView2;
-		cameraView.sceneRotation = sceneRotationTemp;
+	else if (nr == 2)	{
+		cameraView.angle = cameraView2.angle;
+		cameraView.translation = cameraView2.translation;
 	}
+	console.log(cameraView);
 }
 
 
@@ -777,18 +777,23 @@ const vsSource = `
 
 	uniform mat4 uModelViewMatrix;
 	uniform mat4 uProjectionMatrix;
+	uniform mat4 uCameraMatrix;
+	uniform vec3 uCameraPosition;
 
+	varying mediump vec3 vViewToSurface;
 	varying highp vec2 vTextureCoord;
 	varying mediump vec3 vVertexNormal;
 
 	void main()     {
-	gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+	gl_Position = uProjectionMatrix * uCameraMatrix * uModelViewMatrix * aVertexPosition;
+	vViewToSurface = (uModelViewMatrix * aVertexPosition).xyz - (uCameraMatrix * vec4(uCameraPosition, 1.0)).xyz;
 	vTextureCoord = aTextureCoord;
 	vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
         }
 `;
 
 const fsSource = `
+	varying mediump vec3 vViewToSurface;
 	varying highp vec2 vTextureCoord;
 	varying mediump vec3 vVertexNormal;
 
@@ -799,12 +804,16 @@ const fsSource = `
 	void main()     {
 		mediump vec3 normal = normalize(vVertexNormal);
 		mediump vec3 direction = normalize(uLightDirection);
+		mediump vec3 viewToSurface = normalize(vViewToSurface);
+		mediump vec3 halfVector = normalize(direction + viewToSurface);
 
 		mediump float light = dot(normal, direction);
 
-		mediump vec3 temp = texture2D(uSampler, vTextureCoord).rgb;
-		mediump vec3 clamped = temp.rgb + uAmbientLight - temp.rgb * uAmbientLight;
-		gl_FragColor.rgb = (temp + uAmbientLight + temp *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
+		mediump vec3 texture = texture2D(uSampler, vTextureCoord).rgb;
+		mediump vec3 clamped = texture.rgb + uAmbientLight - texture.rgb * uAmbientLight;
+		mediump vec3 direct = (texture + uAmbientLight + texture *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
+		mediump float specular = dot(normal, halfVector);
+		gl_FragColor.rgb = specular * vec3(1.0, 1.0, 1.0);
 	}
 `;
 var pointerRotation = 0.0;
@@ -817,30 +826,23 @@ var cameraView = {
 	angle: 0.45,
 	rotation: 0,
 	translation: [0, 0, -2.5],
-	sceneRotation: 0.0,
-	sceneAngle: 0.0,
 }
 var objects = [];
 var activeField = null;
 var sceneRotation = false;
+var sceneRotationIntensity = 0.0;
 var sceneRotationDirection = 1;
 const cameraView1 = {
 	angle: 0.45,
 	rotation: 0,
 	translation: [0, 0, -2.5],
-	sceneRotation: 0.0,
-	sceneAngle: 0.0,
 }
 const cameraView2 = {
 	angle: 0.77,
 	rotation: 0,
 	translation: [0, -1.5, -2.7],
-	sceneRotation: 0.0,
-	sceneAngle: 0.0,
-}	
+}
 
-const sceneAngle1 = 0.45;
-const sceneAngle2 = 0.77;
 const a1	= [-0.88, -1.1, 0.88];
 const h1 	= [0.88, -1.1, 0.88];
 const a8	= [-0.88, -1.1, -0.88];
@@ -875,12 +877,13 @@ const programInfo =	{
 		textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
 },
 	uniformLocations:	{
-	projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+		projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+		cameraMatrix: gl.getUniformLocation(shaderProgram, 'uCameraMatrix'),
 		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
 		lightDirection: gl.getUniformLocation(shaderProgram, 'uLightDirection'),
 		ambientLight: gl.getUniformLocation(shaderProgram, 'uAmbientLight'),
 		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
-		uWorld: gl.getUniformLocation(shaderProgram, 'uWorld'),
+		cameraPosition: gl.getUniformLocation(shaderProgram, 'uCameraPosition'),
 },
 };
 
@@ -997,9 +1000,9 @@ document.addEventListener("keydown", function(event) 	{
 	case 86:
 		if (whiteView)	{toggleView("b");} else {toggleView("w")}; return;
 	case 65:
-		toggleSceneRotation(); sceneRotationDirection = 1; return;
+		sceneRotation += 0.01; return;
 	case 68:
-		toggleSceneRotation(); sceneRotationDirection = -1; return;
+		sceneRotation += -0.01; return;
 	case 87:
 		toggleSceneAngle(2); return;
 	case 83:
@@ -1007,7 +1010,7 @@ document.addEventListener("keydown", function(event) 	{
 	case 85:
 		getUpdate(); return;
 	case 72:
-		if (document.getElementById("hints").style.display == "none")	{document.getElementById("hints").style.display = "block";} else {document.getElementById("hints").style.display = "none";}
+		if (document.getElementById("hints").style.display == "none")	{document.getElementById("hints").style.display = "block";} else {document.getElementById("hints").style.display = "none";} return;
 	case 27:
 		leave(); return;
 	default:
