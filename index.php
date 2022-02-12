@@ -417,26 +417,36 @@ function initBuffers(gl, obj)	{
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
 		new Uint16Array(indices),
 		gl.STATIC_DRAW);
+	
+	var environmentCubemap = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentCubemap);
+
+	const ctx = document.createElement("canvas").getContext("2d");
+ 
+	ctx.canvas.width = 128;
+	ctx.canvas.height = 128;
 
 	const faceInfos = [
-		{ faceColor: '#F00', textColor: '#0FF', text: '+X' },
-		{ faceColor: '#FF0', textColor: '#00F', text: '-X' },
-		{ faceColor: '#0F0', textColor: '#F0F', text: '+Y' },
-		{ faceColor: '#0FF', textColor: '#F00', text: '-Y' },
-		{ faceColor: '#00F', textColor: '#FF0', text: '+Z' },
-		{ faceColor: '#F0F', textColor: '#0F0', text: '-Z' },
+		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_X, faceColor: '#F00', textColor: '#0FF', text: '+X' },
+		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X, faceColor: '#FF0', textColor: '#00F', text: '-X' },
+		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y, faceColor: '#0F0', textColor: '#F0F', text: '+Y' },
+		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, faceColor: '#0FF', textColor: '#F00', text: '-Y' },
+		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z, faceColor: '#00F', textColor: '#FF0', text: '+Z' },
+		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, faceColor: '#F0F', textColor: '#0F0', text: '-Z' },
 	];
 	faceInfos.forEach((faceInfo) => {
-		const {faceColor, textColor, text} = faceInfo;
+		const {target, faceColor, textColor, text} = faceInfo;
 		generateFace(ctx, faceColor, textColor, text);
 
-		// show the result
-		ctx.canvas.toBlob((blob) => {
-			const img = new Image();
-			img.src = URL.createObjectURL(blob);
-			document.body.appendChild(img);
-		});
+		// Upload the canvas to the cubemap face.
+		const level = 0;
+		const internalFormat = gl.RGBA;
+		const format = gl.RGBA;
+		const type = gl.UNSIGNED_BYTE;
+		gl.texImage2D(target, level, internalFormat, format, type, ctx.canvas);
 	});
+	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 
 	return {
 		position: positionBuffer,
@@ -836,6 +846,8 @@ const fsSource = `
 	uniform sampler2D uSampler;
 	uniform lowp vec3 uAmbientLight;
 
+	uniform samplerCube uEnvironment;
+
 	void main() {
 		mediump vec3 normal = normalize(vVertexNormal);
 		mediump vec3 direction = normalize(uLightDirection);
@@ -967,8 +979,8 @@ async function main() {
 			alert("Ein Object konnte nicht geladen werden");
 		}	
 
-		await say( curr.name + " wird verarbeitet...", curr.color);
-		await sleep(1);
+		await say(curr.name + " wird verarbeitet...", curr.color);
+		//await sleep(1);
 
 		const obj = parseOBJ(file);
 
