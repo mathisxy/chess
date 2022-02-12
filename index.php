@@ -786,7 +786,7 @@ const vsSource = `
 
 	void main()     {
 	gl_Position = uProjectionMatrix * uCameraMatrix * uModelViewMatrix * aVertexPosition;
-	vViewToSurface = (uModelViewMatrix * aVertexPosition).xyz - (uCameraMatrix * vec4(uCameraPosition, 1.0)).xyz;
+	vViewToSurface = (uCameraMatrix * uModelViewMatrix * aVertexPosition).xyz - (uCameraPosition *-1.0);
 	vTextureCoord = aTextureCoord;
 	vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
         }
@@ -813,7 +813,7 @@ const fsSource = `
 		mediump vec3 clamped = texture.rgb + uAmbientLight - texture.rgb * uAmbientLight;
 		mediump vec3 direct = (texture + uAmbientLight + texture *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
 		mediump float specular = dot(normal, halfVector);
-		gl_FragColor.rgb = specular * vec3(1.0, 1.0, 1.0);
+		gl_FragColor.rgb = (vec3(1.0, 1.0, 1.0) * specular);
 	}
 `;
 var pointerRotation = 0.0;
