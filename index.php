@@ -269,8 +269,8 @@ text-align: center;
 <div id="hints"><b>Esc:</b> Spiel beenden, <b>Pfeiltasten:</b> Cursor verschieben, <b>Leertaste:</b> Figure nehmen bzw. setzen, <b>Enter:</b> Zug bestätigen, <b>awsd:</b> Kamera Steuerung, <b>u:</b> Manuelles Update, <b>h:</b> Hilfe öffnen bzw. verstecken</div>
 <canvas width="1280" height="720" id="c"></canvas>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js">
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+<script src="twgl-full.min.js"></script>
 <script>
 
 
@@ -291,7 +291,6 @@ function resizeCanvasToDisplaySize(canvas)	{
 }
 
 function initShaderProgram(gl, vsSource, fsSource)	{
-
 	const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
 	const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
 
@@ -308,7 +307,6 @@ function initShaderProgram(gl, vsSource, fsSource)	{
 	}
 
 	return shaderProgram;
-
 }
 
 function loadShader(gl, type, source)	{
@@ -318,7 +316,6 @@ function loadShader(gl, type, source)	{
 
 	gl.compileShader(shader);
 
-
 	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))	{
 		alert(type + "-shader compile error: " + gl.getShaderInfoLog(shader));
 		gl.deleteShader(shader);
@@ -326,7 +323,6 @@ function loadShader(gl, type, source)	{
 	}
 
 	return shader;
-
 }
 
 function loadTexture(gl, url) {
@@ -375,19 +371,8 @@ function _loadTexture(gl, url, texture, target, type)	{
 	return { texture: texture, target: target };
 }
 
-function isPowerOf2(value)	{
+function isPowerOf2(value) {
 	return (value & (value -1)) == 0;
-}
-
-function generateFace(ctx, faceColor, textColor, text) {
-	const {width, height} = ctx.canvas;
-	ctx.fillStyle = faceColor;
-	ctx.fillRect(0, 0, width, height);
-	ctx.font = `${width * 0.7}px sans-serif`;
-	ctx.textAlign = 'center';
-	ctx.textBaseline = 'middle';
-	ctx.fillStyle = textColor;
-	ctx.fillText(text, width / 2, height / 2);
 }
 
 function initBuffers(gl, obj)	{
@@ -417,7 +402,7 @@ function initBuffers(gl, obj)	{
 	const indexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-	const indices = count(0, maxPolyCount);
+	const indices = range(0, maxPolyCount);
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
 		new Uint16Array(indices),
 		gl.STATIC_DRAW);
@@ -431,8 +416,7 @@ function initBuffers(gl, obj)	{
 
 }
 
-function count(begin, end)	{
-
+function range(begin, end) {
 	let arr = [];
 	for (let i = begin; i <= end; i++)	{
 		arr.push(i);
@@ -636,7 +620,7 @@ function drawScene(gl, programInfo, objects, texture, envTexture, deltaTime, cam
 		hoverIntensity += -deltaTime * hoverSpeed;
 	}
 	if (hoverIntensity > 0.1)       {
-	       	hoverDirection = false;
+		hoverDirection = false;
 		hoverIntensity = 0.1;
 	}
 	else if (hoverIntensity <= 0)        {
@@ -794,68 +778,91 @@ function toggleSceneAngle(nr)	{
 const vsSource = `#version 300 es
 	precision highp float;
 
-	in vec4 aVertexPosition;
-	in vec3 aVertexNormal;
-	in vec2 aTextureCoord;
+	uniform mat4 u_worldViewProjection;
+	uniform vec3 u_lightWorldPos;
+	uniform mat4 u_world;
+	uniform mat4 u_viewInverse;
+	uniform mat4 u_worldInverseTranspose;
 
-	uniform mat4 uModelViewMatrix;
-	uniform mat4 uProjectionMatrix;
-	uniform mat4 uCameraMatrix;
-	uniform vec3 uCameraPosition;
+	in vec4 a_position;
+	in vec3 a_normal;
+	in vec2 a_texcoord;
 
-	out vec3 vViewToSurface;
-	out vec2 vTextureCoord;
-	out vec3 vVertexPosition;
-	out vec3 vVertexNormal;
+	out vec4 v_position;
+	out vec2 v_texCoord;
+	out vec3 v_normal;
+	out vec3 v_surfaceToLight;
+	out vec3 v_surfaceToView;
 
-	void main()     {
-		vec4 pos = uModelViewMatrix * aVertexPosition;
-		vVertexPosition = pos.xyz;
-		gl_Position = uProjectionMatrix * uCameraMatrix * pos;
-
-		vViewToSurface = (uCameraMatrix * uModelViewMatrix * aVertexPosition).xyz - (uCameraPosition *-1.0);
-		vTextureCoord = aTextureCoord;
-		vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
+	void main() {
+		v_texCoord = a_texcoord;
+		v_position = (u_worldViewProjection * a_position);
+		v_normal = (u_worldInverseTranspose * vec4(a_normal, 0)).xyz;
+		v_surfaceToLight = u_lightWorldPos - (u_world * a_position).xyz;
+		v_surfaceToView = (u_viewInverse[3] - (u_world * a_position)).xyz;
+		gl_Position = v_position;
 	}
 `;
 
 const fsSource = `#version 300 es
 	precision highp float;
 
-	in vec3 vViewToSurface;
-	in vec2 vTextureCoord;
-	in vec3 vVertexPosition;
-	in vec3 vVertexNormal;
+	in vec4 v_position;
+	in vec2 v_texCoord;
+	in vec3 v_normal;
+	in vec3 v_surfaceToLight;
+	in vec3 v_surfaceToView;
 
-	uniform vec3 uLightDirection;
-	uniform sampler2D uSampler;
-	uniform vec3 uAmbientLight;
-
-	uniform samplerCube uEnvironmentSampler;
+	uniform vec4 u_lightColor;
+	uniform vec4 u_colorMult;
+	uniform sampler2D u_diffuse;
+	uniform vec4 u_specular;
+	uniform float u_shininess;
+	uniform float u_specularFactor;
 
 	out vec4 outColor;
 
-	void main() {
-		vec3 normal = normalize(vVertexNormal);
-		vec3 direction = normalize(uLightDirection);
-		vec3 viewToSurface = normalize(vViewToSurface);
-		vec3 reflectDirection = reflect(viewToSurface, normal);
-
-		// vec3 viewToSurface = normalize(vViewToSurface);
-
-		vec3 halfVector = normalize(direction + viewToSurface);
-
-		float light = dot(normal, direction);
-
-		vec3 color = texture(uSampler, vTextureCoord).rgb;
-		vec3 clamped = color.rgb + uAmbientLight - color.rgb * uAmbientLight;
-		vec3 direct = (color + uAmbientLight + color *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
-		float specular = dot(normal, halfVector);
-		
-		// outColor = vec4(specular, specular, specular, 1);
-		outColor = texture(uEnvironmentSampler, normalize(vVertexPosition));
-		// outColor = vec4(normalize(vVertexPosition), 1);
+	vec4 lit(float l ,float h, float m) {
+		return vec4(1.0,
+					abs(l),
+					(l > 0.0) ? pow(max(0.0, h), m) : 0.0,
+					1.0);
 	}
+
+	void main() {
+		vec4 diffuseColor = texture(u_diffuse, v_texCoord);
+		vec3 a_normal = normalize(v_normal);
+		vec3 surfaceToLight = normalize(v_surfaceToLight);
+		vec3 surfaceToView = normalize(v_surfaceToView);
+		vec3 halfVector = normalize(surfaceToLight + surfaceToView);
+		vec4 litR = lit(dot(a_normal, surfaceToLight),
+						dot(a_normal, halfVector), u_shininess);
+		outColor = vec4((
+		u_lightColor * (diffuseColor * litR.y * u_colorMult +
+					u_specular * litR.z * u_specularFactor)).rgb,
+			diffuseColor.a);
+	}
+	// void main() {
+	// 	vec3 normal = normalize(vVertexNormal);
+	// 	vec3 direction = normalize(uLightDirection);
+	// 	vec3 viewToSurface = normalize(vViewToSurface);
+	// 	vec3 reflectDirection = reflect(viewToSurface, normal);
+
+	// 	// vec3 viewToSurface = normalize(vViewToSurface);
+
+	// 	vec3 halfVector = normalize(direction + viewToSurface);
+
+	// 	float light = dot(normal, direction);
+
+	// 	vec3 color = texture(uSampler, vTextureCoord).rgb;
+	// 	vec3 clamped = color.rgb + uAmbientLight - color.rgb * uAmbientLight;
+	// 	vec3 direct = (color + uAmbientLight + color *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
+	// 	float specular = dot(normal, halfVector);
+		
+	// 	// outColor = vec4(specular, specular, specular, 1);
+	// 	// outColor = texture(uEnvironmentSampler, vec3(1, 1, 1));
+	// 	// outColor = vec4(normalize(vVertexPosition), 1);
+	// }
 `;
 
 var pointerRotation = 0.0;
@@ -907,9 +914,107 @@ async function main() {
 
 	if (!gl)	{
 		alert("WebGL 2.0 wird nicht unterstützt");
+		return;
 	}
 
-	const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+	twgl.setAttributePrefix("a_");
+	
+	var programInfo = twgl.createProgramInfo(gl, [vsShader, fsShader]);
+	var vao = twgl.createVAOFromBufferInfo(
+		gl, programInfo, bufferInfo);
+
+	var uniformSetters = twgl.createUniformSetters(gl, program);
+	var attribSetters  = twgl.createAttributeSetters(gl, program);
+
+	var attribs = {
+		a_position: { buffer: positionBuffer, numComponents: 3, },
+		a_normal:   { buffer: normalBuffer,   numComponents: 3, },
+		a_texcoord: { buffer: texcoordBuffer, numComponents: 2, },
+	};
+	var vao = twgl.createVAOAndSetAttributes(gl, attribSetters, attribs);
+
+	var uniformsThatAreTheSameForAllObjects = {
+		u_lightWorldPos:         [100, 200, 300],
+		u_viewInverse:           computeInverseViewMatrix(),
+		u_lightColor:            [1, 1, 1, 1],
+	};
+	
+	var uniformsThatAreComputedForEachObject = {
+		u_worldViewProjection:   perspective(...),
+		u_world:                 computeWorldMatrix(),
+		u_worldInverseTranspose: computeWorldInverseTransposeMatrix(),
+	};
+	
+	var objects = [
+		{
+			translation: [10, 50, 100],
+			materialUniforms: {
+				u_ambient:               [0.1, 0.1, 0.1, 1],
+				u_diffuse:               diffuseTexture,
+				u_specular:              [1, 1, 1, 1],
+				u_shininess:             60,
+				u_specularFactor:        1,
+			},
+		},
+		{
+			translation: [-120, 20, 44],
+			materialUniforms: {
+				u_ambient:               [0.1, 0.2, 0.1, 1],
+				u_diffuse:               someOtherDiffuseTexture,
+				u_specular:              [1, 1, 0, 1],
+				u_shininess:             30,
+				u_specularFactor:        0.5,
+			},
+		},
+	];
+	
+	gl.useProgram(program);
+	gl.bindAttribArray(vao);
+	twgl.setUniforms(uniformSetters, uniformThatAreTheSameForAllObjects);
+	
+	requestAnimationFrame(drawScene);
+
+	function drawScene(time) {
+		time = 5 + time * 0.0001;
+
+		twgl.resizeCanvasToDisplaySize(gl.canvas);
+
+		// Tell WebGL how to convert from clip space to pixels
+		gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+		gl.enable(gl.CULL_FACE);
+		gl.enable(gl.DEPTH_TEST);
+
+		// Compute the projection matrix
+		var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+		var projectionMatrix =
+			m4.perspective(fieldOfViewRadians, aspect, 1, 2000);
+
+		// Compute the camera's matrix using look at.
+		var cameraPosition = [0, 0, 100];
+		var target = [0, 0, 0];
+		var up = [0, 1, 0];
+		gl.bindVertexArray(vao);
+
+		// Set the uniforms that are the same for all objects.
+		twgl.setUniforms(uniformSetters, uniformsThatAreTheSameForAllObjects);
+
+		// Draw objects
+		objects.forEach(function(object) {
+
+			// Compute a position for this object based on the time.
+			var worldMatrix = m4.identity();
+			twgl.setUniforms(uniformSetters, uniformsThatAreComputedForEachObject);
+
+			// Set the uniforms that are specific to the this object.
+			twgl.setUniforms(uniformSetters, object.materialUniforms);
+
+			// Draw the geometry.
+			gl.drawElements(gl.TRIANGLES, buffers.numElements, gl.UNSIGNED_SHORT, 0);
+		});
+
+		requestAnimationFrame(drawScene);
+	}
 
 	const programInfo =	{
 		program: shaderProgram,
