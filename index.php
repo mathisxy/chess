@@ -329,10 +329,14 @@ function loadShader(gl, type, source)	{
 
 }
 
-function loadTexture(gl, url)	{
-	const texture = gl.createTexture();
-	gl.bindTexture(gl.TEXTURE_2D, texture);
-
+function loadTexture(gl, url) {
+	_loadTexture(gl, url, null, gl.TEXTURE_2D, gl.TEXTURE_2D.texture)
+}
+function _loadTexture(gl, url, texture, target, type)	{
+	if (texture == null) {
+		texture = gl.createTexture();
+		gl.bindTexture(type, texture);
+	}
 
 	const level = 0;
 	const internalFormat = gl.RGBA;
@@ -343,7 +347,7 @@ function loadTexture(gl, url)	{
 	const srcType = gl.UNSIGNED_BYTE;
 	const pixel = new Uint8Array([0, 0, 255, 255]);
 
-	gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+	gl.texImage2D(target, level, internalFormat,
 		width, height, border, srcFormat, srcType,
 		pixel);
 
@@ -351,24 +355,24 @@ function loadTexture(gl, url)	{
 	const image = new Image();
 	image.onload = function(event)	{
 		console.log(event);
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+		gl.bindTexture(type, texture);
+		gl.texImage2D(target, level, internalFormat,
 			srcFormat, srcType, image);
 
 		if (isPowerOf2(image.width) && isPowerOf2(image.height))	{
-			gl.generateMipmap(gl.TEXTURE_2D);
+			gl.generateMipmap(type);
 		} else	{
 
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+			gl.texParameteri(type, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(type, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+			gl.texParameteri(type, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		}
 	};
 
 
 	image.src = url;
 
-	return texture;
+	return { texture: texture, target: target };
 }
 
 function isPowerOf2(value)	{
@@ -418,36 +422,6 @@ function initBuffers(gl, obj)	{
 		new Uint16Array(indices),
 		gl.STATIC_DRAW);
 	
-	var environmentCubemap = gl.createTexture();
-	gl.bindTexture(gl.TEXTURE_CUBE_MAP, environmentCubemap);
-
-	const ctx = document.createElement("canvas").getContext("2d");
- 
-	ctx.canvas.width = 128;
-	ctx.canvas.height = 128;
-
-	const faceInfos = [
-		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_X, faceColor: '#F00', textColor: '#0FF', text: '+X' },
-		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_X, faceColor: '#FF0', textColor: '#00F', text: '-X' },
-		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_Y, faceColor: '#0F0', textColor: '#F0F', text: '+Y' },
-		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, faceColor: '#0FF', textColor: '#F00', text: '-Y' },
-		{ target: gl.TEXTURE_CUBE_MAP_POSITIVE_Z, faceColor: '#00F', textColor: '#FF0', text: '+Z' },
-		{ target: gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, faceColor: '#F0F', textColor: '#0F0', text: '-Z' },
-	];
-	faceInfos.forEach((faceInfo) => {
-		const {target, faceColor, textColor, text} = faceInfo;
-		generateFace(ctx, faceColor, textColor, text);
-
-		// Upload the canvas to the cubemap face.
-		const level = 0;
-		const internalFormat = gl.RGBA;
-		const format = gl.RGBA;
-		const type = gl.UNSIGNED_BYTE;
-		gl.texImage2D(target, level, internalFormat, format, type, ctx.canvas);
-	});
-	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-
 	return {
 		position: positionBuffer,
 		textureCoord: textureCoordBuffer,
@@ -466,7 +440,7 @@ function count(begin, end)	{
 	return arr;
 }
 
-function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
+function drawScene(gl, programInfo, objects, texture, envTexture, deltaTime, cameraView)	{
 
 	gl.clearColor(0.5, 0.0, 0.0, 1.0);
 	gl.clearDepth(1.0);
@@ -510,50 +484,50 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	for (let i = 0; i< field.length + objects.length; i++) {
 			
 		let currentObject;
-		if (i < field.length)	{
+		if (i < field.length) {
 			if (field[i] == 0)	{
 				continue;
 			}
-			else	{
+			else {
 				currentObject = figures[field[i]];
 				currentObject.field = getField(i);
 			}
 		}
-		else	{
+		else {
 			currentObject = objects[i - field.length];
 		}	
 		
-		if (currentObject.field !== undefined)	{
+		if (currentObject.field !== undefined) {
 			currentObject.translation = getCoords(currentObject.field);
 		}
 		
 		const modelViewMatrix = mat4.create();
 
-		if (currentObject.translation !== undefined)	{
+		if (currentObject.translation !== undefined) {
 			mat4.translate(modelViewMatrix,
 				modelViewMatrix,
 				currentObject.translation);
 		}
-		if (activeField !== null)	{
+		if (activeField !== null) {
 			if (getIndex(activeField) == i)	{
 				mat4.translate(modelViewMatrix,
 					modelViewMatrix,
 					[0, 1*hoverIntensity, 0]);
 			}
 		}
-		if (currentObject.name == "Pointer")	{
+		if (currentObject.name == "Pointer") {
 			mat4.rotate(modelViewMatrix,
 				modelViewMatrix,
 				pointerRotation * 0.7,
 				[0, 1, 0]);
 		}
-		if (currentObject.rotation !== undefined)	{
+		if (currentObject.rotation !== undefined) {
 			mat4.rotate(modelViewMatrix,
 				modelViewMatrix,
 				currentObject.rotation,
 				[0, 1, 0]);
 		}
-		if (currentObject.scale !== undefined)	{
+		if (currentObject.scale !== undefined) {
 			mat4.scale(modelViewMatrix,
 				modelViewMatrix,
 				[currentObject.scale, currentObject.scale, currentObject.scale]);
@@ -632,11 +606,13 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 			false,
 			modelViewMatrix);
 
-		gl.activeTexture(gl.TEXTURE0);
-		
+		gl.activeTexture(gl.TEXTURE0 + 0);
 		gl.bindTexture(gl.TEXTURE_2D, texture);
-
 		gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+
+		gl.activeTexture(gl.TEXTURE0 + 1);
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubeMapTexture);
+		gl.uniform1i(programInfo.uniformLocations.uEnvironmentSampler, 0);
 
 		gl.uniform3fv(programInfo.uniformLocations.lightDirection, lightDirection);
 
@@ -815,52 +791,70 @@ function toggleSceneAngle(nr)	{
 }
 
 // TODO?: #version 300 es
-const vsSource = `
-	attribute vec4 aVertexPosition;
-	attribute vec3 aVertexNormal;
-	attribute vec2 aTextureCoord;
+const vsSource = `#version 300 es
+	precision highp float;
+
+	in vec4 aVertexPosition;
+	in vec3 aVertexNormal;
+	in vec2 aTextureCoord;
 
 	uniform mat4 uModelViewMatrix;
 	uniform mat4 uProjectionMatrix;
 	uniform mat4 uCameraMatrix;
 	uniform vec3 uCameraPosition;
 
-	varying mediump vec3 vViewToSurface;
-	varying highp vec2 vTextureCoord;
-	varying mediump vec3 vVertexNormal;
+	out vec3 vViewToSurface;
+	out vec2 vTextureCoord;
+	out vec3 vVertexPosition;
+	out vec3 vVertexNormal;
 
 	void main()     {
-		gl_Position = uProjectionMatrix * uCameraMatrix * uModelViewMatrix * aVertexPosition;
+		vec4 pos = uModelViewMatrix * aVertexPosition;
+		vVertexPosition = pos.xyz;
+		gl_Position = uProjectionMatrix * uCameraMatrix * pos;
+
 		vViewToSurface = (uCameraMatrix * uModelViewMatrix * aVertexPosition).xyz - (uCameraPosition *-1.0);
 		vTextureCoord = aTextureCoord;
 		vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
 	}
 `;
 
-const fsSource = `
-	varying mediump vec3 vViewToSurface;
-	varying highp vec2 vTextureCoord;
-	varying mediump vec3 vVertexNormal;
+const fsSource = `#version 300 es
+	precision highp float;
 
-	uniform mediump vec3 uLightDirection;
+	in vec3 vViewToSurface;
+	in vec2 vTextureCoord;
+	in vec3 vVertexPosition;
+	in vec3 vVertexNormal;
+
+	uniform vec3 uLightDirection;
 	uniform sampler2D uSampler;
-	uniform lowp vec3 uAmbientLight;
+	uniform vec3 uAmbientLight;
 
-	uniform samplerCube uEnvironment;
+	uniform samplerCube uEnvironmentSampler;
+
+	out vec4 outColor;
 
 	void main() {
-		mediump vec3 normal = normalize(vVertexNormal);
-		mediump vec3 direction = normalize(uLightDirection);
-		mediump vec3 viewToSurface = normalize(vViewToSurface);
-		mediump vec3 halfVector = normalize(direction + viewToSurface);
+		vec3 normal = normalize(vVertexNormal);
+		vec3 direction = normalize(uLightDirection);
+		vec3 viewToSurface = normalize(vViewToSurface);
+		vec3 reflectDirection = reflect(viewToSurface, normal);
 
-		mediump float light = dot(normal, direction);
+		// vec3 viewToSurface = normalize(vViewToSurface);
 
-		mediump vec3 texture = texture2D(uSampler, vTextureCoord).rgb;
-		mediump vec3 clamped = texture.rgb + uAmbientLight - texture.rgb * uAmbientLight;
-		mediump vec3 direct = (texture + uAmbientLight + texture *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
-		mediump float specular = dot(normal, halfVector);
-		gl_FragColor.rgb = (vec3(1.0, 1.0, 1.0) * specular);
+		vec3 halfVector = normalize(direction + viewToSurface);
+
+		float light = dot(normal, direction);
+
+		vec3 color = texture(uSampler, vTextureCoord).rgb;
+		vec3 clamped = color.rgb + uAmbientLight - color.rgb * uAmbientLight;
+		vec3 direct = (color + uAmbientLight + color *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
+		float specular = dot(normal, halfVector);
+		
+		// outColor = vec4(specular, specular, specular, 1);
+		outColor = texture(uEnvironmentSampler, normalize(vVertexPosition));
+		// outColor = vec4(normalize(vVertexPosition), 1);
 	}
 `;
 
@@ -917,14 +911,13 @@ async function main() {
 
 	const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
 
-
 	const programInfo =	{
 		program: shaderProgram,
 		attribLocations:	{
 			vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
 			vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
 			textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
-	},
+		},
 		uniformLocations:	{
 			projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
 			cameraMatrix: gl.getUniformLocation(shaderProgram, 'uCameraMatrix'),
@@ -932,9 +925,19 @@ async function main() {
 			lightDirection: gl.getUniformLocation(shaderProgram, 'uLightDirection'),
 			ambientLight: gl.getUniformLocation(shaderProgram, 'uAmbientLight'),
 			uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+			uEnvironmentSampler: gl.getUniformLocation(shaderProgram, 'uEnvironmentSampler'),
 			cameraPosition: gl.getUniformLocation(shaderProgram, 'uCameraPosition'),
-	},
+		},
 	};
+
+	cubeMapTexture = null;
+	_loadTexture(gl, 'stolenCubemap/pos-x.jpg', cubeMapTexture, gl.TEXTURE_CUBE_MAP_POSITIVE_X, gl.TEXTURE_CUBE_MAP);
+	_loadTexture(gl, 'stolenCubemap/pos-y.jpg', cubeMapTexture, gl.TEXTURE_CUBE_MAP_POSITIVE_Y, gl.TEXTURE_CUBE_MAP);
+	_loadTexture(gl, 'stolenCubemap/pos-z.jpg', cubeMapTexture, gl.TEXTURE_CUBE_MAP_POSITIVE_Z, gl.TEXTURE_CUBE_MAP);
+
+	_loadTexture(gl, 'stolenCubemap/neg-x.jpg', cubeMapTexture, gl.TEXTURE_CUBE_MAP_NEGATIVE_X, gl.TEXTURE_CUBE_MAP);
+	_loadTexture(gl, 'stolenCubemap/neg-y.jpg', cubeMapTexture, gl.TEXTURE_CUBE_MAP_NEGATIVE_Y, gl.TEXTURE_CUBE_MAP);
+	_loadTexture(gl, 'stolenCubemap/neg-z.jpg', cubeMapTexture, gl.TEXTURE_CUBE_MAP_NEGATIVE_Z, gl.TEXTURE_CUBE_MAP);
 
 	const texture = loadTexture(gl, 'chessBoard.jpg');
 
@@ -1021,7 +1024,7 @@ async function main() {
 		const deltaTime = now -then;
 		then = now;
 
-		drawScene(gl, programInfo, objects, texture, deltaTime, cameraView);
+		drawScene(gl, programInfo, objects, texture, cubeMapTexture, deltaTime, cameraView);
 
 		requestAnimationFrame(render);
 	}
