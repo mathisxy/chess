@@ -1,4 +1,3 @@
-
 "use strict";
 
 var vs = `#version 300 es
@@ -156,18 +155,14 @@ function main() {
 
   var bufferInfo;
   var vao;
-  var toggle = document.querySelector("#toggle");
-  toggle.addEventListener('click', toggleShape);
 
   function toggleShape() {
     if (bufferInfo === quadBufferInfo) {
       bufferInfo = triangleBufferInfo;
       vao        = triangleVAO;
-      toggle.textContent = "switch to quads(▢)";
     } else {
       bufferInfo = quadBufferInfo;
       vao        = quadVAO;
-      toggle.textContent = "switch to triangles(△)";
     }
   }
   toggleShape();

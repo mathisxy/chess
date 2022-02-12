@@ -269,7 +269,7 @@ text-align: center;
 <div id="hints"><b>Esc:</b> Spiel beenden, <b>Pfeiltasten:</b> Cursor verschieben, <b>Leertaste:</b> Figure nehmen bzw. setzen, <b>Enter:</b> Zug bestätigen, <b>awsd:</b> Kamera Steuerung, <b>u:</b> Manuelles Update, <b>h:</b> Hilfe öffnen bzw. verstecken</div>
 <canvas width="1280" height="720" id="c"></canvas>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script>
+<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"></script> -->
 <!-- <script src="twgl-full.min.js"></script> -->
 
 <script src="https://webgl2fundamentals.org/webgl/resources/twgl-full.min.js"></script>
@@ -277,7 +277,7 @@ text-align: center;
 <script src="https://webgl2fundamentals.org/webgl/resources/texture-utils.js"></script>
 <script src="https://webgl2fundamentals.org/webgl/resources/chroma.min.js"></script>
 
-<script src="chess.js"></script>
+<script src="stolen.js"></script>
 
 
 </body>
