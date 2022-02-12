@@ -434,7 +434,7 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	const fieldOfView = 36 * Math.PI / 180;
+	const fieldOfView = 37 * Math.PI / 180;
 	const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
 	const zNear = 0.1;
 	const zFar = 100.0;
@@ -786,7 +786,7 @@ const vsSource = `
 
 	void main()     {
 	gl_Position = uProjectionMatrix * uCameraMatrix * uModelViewMatrix * aVertexPosition;
-	vViewToSurface = (uCameraMatrix * uModelViewMatrix * aVertexPosition).xyz - (uCameraPosition *-1.0);
+	vViewToSurface = (uCameraMatrix * uModelViewMatrix * aVertexPosition).xyz + uCameraPosition;
 	vTextureCoord = aTextureCoord;
 	vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
         }
@@ -812,15 +812,18 @@ const fsSource = `
 		mediump vec3 texture = texture2D(uSampler, vTextureCoord).rgb;
 		mediump vec3 clamped = texture.rgb + uAmbientLight - texture.rgb * uAmbientLight;
 		mediump vec3 direct = (texture + uAmbientLight + texture *uAmbientLight) * uAmbientLight + max(clamped * light * (1.0 - uAmbientLight), 0.0);
-		mediump float specular = dot(normal, halfVector);
-		gl_FragColor.rgb = (vec3(1.0, 1.0, 1.0) * specular);
+		mediump float specular = 0.0;
+		if (light > 0.0)	{
+			specular = pow(dot(halfVector, normal), 77.0);
+		}
+		gl_FragColor.rgb = direct + 0.0;
 	}
 `;
 var pointerRotation = 0.0;
 var hoverIntensity = 0.0;
 var hoverDirection = true;
 var hoverSpeed = 0.1;
-var lightDirection = [1.3, 0.7, -1.0];
+var lightDirection = [0.0, 2.5, -1.0];
 var ambientLight = [0.3, 0.2, 0.2];
 var cameraView = {
 	angle: 0.45,
