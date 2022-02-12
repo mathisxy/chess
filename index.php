@@ -277,7 +277,7 @@ text-align: center;
 <script src="https://webgl2fundamentals.org/webgl/resources/texture-utils.js"></script>
 <script src="https://webgl2fundamentals.org/webgl/resources/chroma.min.js"></script>
 
-<script src="stolen.js"></script>
+<script src="stolen2.js"></script>
 
 </body>
 </html>
