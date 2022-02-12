@@ -279,6 +279,5 @@ text-align: center;
 
 <script src="stolen.js"></script>
 
-
 </body>
 </html>
