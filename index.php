@@ -375,6 +375,17 @@ function isPowerOf2(value)	{
 	return (value & (value -1)) == 0;
 }
 
+function generateFace(ctx, faceColor, textColor, text) {
+	const {width, height} = ctx.canvas;
+	ctx.fillStyle = faceColor;
+	ctx.fillRect(0, 0, width, height);
+	ctx.font = `${width * 0.7}px sans-serif`;
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	ctx.fillStyle = textColor;
+	ctx.fillText(text, width / 2, height / 2);
+}
+
 function initBuffers(gl, obj)	{
 	const positionBuffer = gl.createBuffer();
 
@@ -406,6 +417,26 @@ function initBuffers(gl, obj)	{
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,
 		new Uint16Array(indices),
 		gl.STATIC_DRAW);
+
+	const faceInfos = [
+		{ faceColor: '#F00', textColor: '#0FF', text: '+X' },
+		{ faceColor: '#FF0', textColor: '#00F', text: '-X' },
+		{ faceColor: '#0F0', textColor: '#F0F', text: '+Y' },
+		{ faceColor: '#0FF', textColor: '#F00', text: '-Y' },
+		{ faceColor: '#00F', textColor: '#FF0', text: '+Z' },
+		{ faceColor: '#F0F', textColor: '#0F0', text: '-Z' },
+	];
+	faceInfos.forEach((faceInfo) => {
+		const {faceColor, textColor, text} = faceInfo;
+		generateFace(ctx, faceColor, textColor, text);
+
+		// show the result
+		ctx.canvas.toBlob((blob) => {
+			const img = new Image();
+			img.src = URL.createObjectURL(blob);
+			document.body.appendChild(img);
+		});
+	});
 
 	return {
 		position: positionBuffer,
@@ -467,147 +498,148 @@ function drawScene(gl, programInfo, objects, texture, deltaTime, cameraView)	{
 	
 
 	for (let i = 0; i< field.length + objects.length; i++) {
-		
-	let currentObject;
-	if (i < field.length)	{
-		if (field[i] == 0)	{
-			continue;
+			
+		let currentObject;
+		if (i < field.length)	{
+			if (field[i] == 0)	{
+				continue;
+			}
+			else	{
+				currentObject = figures[field[i]];
+				currentObject.field = getField(i);
+			}
 		}
 		else	{
-			currentObject = figures[field[i]];
-			currentObject.field = getField(i);
+			currentObject = objects[i - field.length];
+		}	
+		
+		if (currentObject.field !== undefined)	{
+			currentObject.translation = getCoords(currentObject.field);
 		}
-	}
-	else	{
-		currentObject = objects[i - field.length];
-	}	
-	
-	if (currentObject.field !== undefined)	{
-		currentObject.translation = getChoords(currentObject.field);
-	}
-	
-	const modelViewMatrix = mat4.create();
+		
+		const modelViewMatrix = mat4.create();
 
-	if (currentObject.translation !== undefined)	{
-	mat4.translate(modelViewMatrix,
-		modelViewMatrix,
-		currentObject.translation);
-	}
-	if (activeField !== null)	{
-		if (getIndex(activeField) == i)	{
-	mat4.translate(modelViewMatrix,
-		modelViewMatrix,
-		[0, 1*hoverIntensity, 0]);
+		if (currentObject.translation !== undefined)	{
+			mat4.translate(modelViewMatrix,
+				modelViewMatrix,
+				currentObject.translation);
 		}
-	}
-	if (currentObject.name == "Pointer")	{
-	mat4.rotate(modelViewMatrix,
-		modelViewMatrix,
-		pointerRotation * 0.7,
-		[0, 1, 0]);
-	}
-	if (currentObject.rotation !== undefined)	{
-	mat4.rotate(modelViewMatrix,
-		modelViewMatrix,
-		currentObject.rotation,
-		[0, 1, 0]);
-	}
-	if (currentObject.scale !== undefined)	{
-	mat4.scale(modelViewMatrix,
-		modelViewMatrix,
-		[currentObject.scale, currentObject.scale, currentObject.scale]);
-	}
-	{
-		const numComponents = 3;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 0;
-		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.position);
-		gl.vertexAttribPointer(
-			programInfo.attribLocations.vertexPosition,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(
-			programInfo.attribLocations.vertexPosition);
+		if (activeField !== null)	{
+			if (getIndex(activeField) == i)	{
+				mat4.translate(modelViewMatrix,
+					modelViewMatrix,
+					[0, 1*hoverIntensity, 0]);
+			}
+		}
+		if (currentObject.name == "Pointer")	{
+			mat4.rotate(modelViewMatrix,
+				modelViewMatrix,
+				pointerRotation * 0.7,
+				[0, 1, 0]);
+		}
+		if (currentObject.rotation !== undefined)	{
+			mat4.rotate(modelViewMatrix,
+				modelViewMatrix,
+				currentObject.rotation,
+				[0, 1, 0]);
+		}
+		if (currentObject.scale !== undefined)	{
+			mat4.scale(modelViewMatrix,
+				modelViewMatrix,
+				[currentObject.scale, currentObject.scale, currentObject.scale]);
+		}
 
-	}
-	
-	{
-		const numComponents = 3;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 0;
-		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.normals);
-		gl.vertexAttribPointer(
-			programInfo.attribLocations.vertexNormal,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(
-			programInfo.attribLocations.vertexNormal);
-	}
+		{
+			const numComponents = 3;
+			const type = gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
+			gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.position);
+			gl.vertexAttribPointer(
+				programInfo.attribLocations.vertexPosition,
+				numComponents,
+				type,
+				normalize,
+				stride,
+				offset);
+			gl.enableVertexAttribArray(
+				programInfo.attribLocations.vertexPosition);
 
-	{
-		const numComponents = 2;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 0;
-		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.textureCoord);
-		gl.vertexAttribPointer(
-			programInfo.attribLocations.textureCoord,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(
-			programInfo.attribLocations.textureCoord);
-	}
+		}
+		
+		{
+			const numComponents = 3;
+			const type = gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
+			gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.normals);
+			gl.vertexAttribPointer(
+				programInfo.attribLocations.vertexNormal,
+				numComponents,
+				type,
+				normalize,
+				stride,
+				offset);
+			gl.enableVertexAttribArray(
+				programInfo.attribLocations.vertexNormal);
+		}
 
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, currentObject.buffers.indices);
+		{
+			const numComponents = 2;
+			const type = gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
+			gl.bindBuffer(gl.ARRAY_BUFFER, currentObject.buffers.textureCoord);
+			gl.vertexAttribPointer(
+				programInfo.attribLocations.textureCoord,
+				numComponents,
+				type,
+				normalize,
+				stride,
+				offset);
+			gl.enableVertexAttribArray(
+				programInfo.attribLocations.textureCoord);
+		}
+
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, currentObject.buffers.indices);
 
 
-	gl.useProgram(programInfo.program);
+		gl.useProgram(programInfo.program);
 
-	gl.uniformMatrix4fv(
-		programInfo.uniformLocations.cameraMatrix,
-		false,
-		cameraMatrix);
-	gl.uniformMatrix4fv(
-		programInfo.uniformLocations.projectionMatrix,
-		false,
-		projectionMatrix);
-	gl.uniformMatrix4fv(
-		programInfo.uniformLocations.modelViewMatrix,
-		false,
-		modelViewMatrix);
+		gl.uniformMatrix4fv(
+			programInfo.uniformLocations.cameraMatrix,
+			false,
+			cameraMatrix);
+		gl.uniformMatrix4fv(
+			programInfo.uniformLocations.projectionMatrix,
+			false,
+			projectionMatrix);
+		gl.uniformMatrix4fv(
+			programInfo.uniformLocations.modelViewMatrix,
+			false,
+			modelViewMatrix);
 
-	gl.activeTexture(gl.TEXTURE0);
-	
-	gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.activeTexture(gl.TEXTURE0);
+		
+		gl.bindTexture(gl.TEXTURE_2D, texture);
 
-	gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
+		gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
-	gl.uniform3fv(programInfo.uniformLocations.lightDirection, lightDirection);
+		gl.uniform3fv(programInfo.uniformLocations.lightDirection, lightDirection);
 
-	gl.uniform3fv(programInfo.uniformLocations.ambientLight, ambientLight);
+		gl.uniform3fv(programInfo.uniformLocations.ambientLight, ambientLight);
 
-	gl.uniform3fv(programInfo.uniformLocations.cameraPosition, cameraView.translation);
+		gl.uniform3fv(programInfo.uniformLocations.cameraPosition, cameraView.translation);
 
-	{
-		const offset = 0;
-		const vertexCount = maxPolyCount;
-		const type = gl.UNSIGNED_SHORT;
-		gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-	}
+		{
+			const offset = 0;
+			const vertexCount = maxPolyCount;
+			const type = gl.UNSIGNED_SHORT;
+			gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+		}
 	}
 
 	pointerRotation += deltaTime;
@@ -733,7 +765,8 @@ function parseOBJ(text)	{
        	}
 	function usemtl(parts)	{ return parts[0]; }
 }
-function getChoords(pos)	{
+
+function getCoords(pos)	{
 	return [a1[0] + pos[0]/7*(h1[0]-a1[0]), a1[1], a1[2] + pos[1]/7*(a8[2]-a1[2])]; 
 }
 
@@ -748,6 +781,7 @@ function toggleView(color)	{
 	}
 	console.log(cameraView);
 }
+
 function toggleSceneRotation()	{
 	if (sceneRotation)	{
 		sceneRotation = false;
@@ -757,6 +791,7 @@ function toggleSceneRotation()	{
 		sceneRotation = true;
 	}
 }
+
 function toggleSceneAngle(nr)	{
 	if (nr == 1)	{
 		cameraView.angle = cameraView1.angle;
@@ -769,7 +804,7 @@ function toggleSceneAngle(nr)	{
 	console.log(cameraView);
 }
 
-
+// TODO?: #version 300 es
 const vsSource = `
 	attribute vec4 aVertexPosition;
 	attribute vec3 aVertexNormal;
@@ -784,12 +819,12 @@ const vsSource = `
 	varying highp vec2 vTextureCoord;
 	varying mediump vec3 vVertexNormal;
 
-	void main()     {
-	gl_Position = uProjectionMatrix * uCameraMatrix * uModelViewMatrix * aVertexPosition;
-	vViewToSurface = (uModelViewMatrix * aVertexPosition).xyz - (uCameraMatrix * vec4(uCameraPosition, 1.0)).xyz;
-	vTextureCoord = aTextureCoord;
-	vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
-        }
+	void main() {
+		gl_Position = uProjectionMatrix * uCameraMatrix * uModelViewMatrix * aVertexPosition;
+		vViewToSurface = (uModelViewMatrix * aVertexPosition).xyz - (uCameraMatrix * vec4(uCameraPosition, 1.0)).xyz;
+		vTextureCoord = aTextureCoord;
+		vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
+	}
 `;
 
 const fsSource = `
@@ -801,7 +836,7 @@ const fsSource = `
 	uniform sampler2D uSampler;
 	uniform lowp vec3 uAmbientLight;
 
-	void main()     {
+	void main() {
 		mediump vec3 normal = normalize(vVertexNormal);
 		mediump vec3 direction = normalize(uLightDirection);
 		mediump vec3 viewToSurface = normalize(vViewToSurface);
@@ -816,6 +851,7 @@ const fsSource = `
 		gl_FragColor.rgb = specular * vec3(1.0, 1.0, 1.0);
 	}
 `;
+
 var pointerRotation = 0.0;
 var hoverIntensity = 0.0;
 var hoverDirection = true;
@@ -852,132 +888,136 @@ const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
 const maxPolyCount = 13000;
 	
-async function main()	{
+async function main() {
 
 	if (typeof whiteView === 'undefined')	{
 		alert("Bitte die Lobby verwenden um einem Spiel beizutreten");
 		window.location.replace("lobby.php");
 	}
-const canvas = document.querySelector("#c");
 
-const gl = canvas.getContext("webgl2");
+	const canvas = document.querySelector("#c");
 
-if (!gl)	{
-	alert("WebGL 2.0 wird nicht unterstützt");
-}
+	const gl = canvas.getContext("webgl2");
 
-const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
-
-
-const programInfo =	{
-	program: shaderProgram,
-	attribLocations:	{
-		vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-		vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
-		textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
-},
-	uniformLocations:	{
-		projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-		cameraMatrix: gl.getUniformLocation(shaderProgram, 'uCameraMatrix'),
-		modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-		lightDirection: gl.getUniformLocation(shaderProgram, 'uLightDirection'),
-		ambientLight: gl.getUniformLocation(shaderProgram, 'uAmbientLight'),
-		uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
-		cameraPosition: gl.getUniformLocation(shaderProgram, 'uCameraPosition'),
-},
-};
-
-const texture = loadTexture(gl, 'chessBoard.jpg');
-
-objects = [
-{name: 'Schachfeld', url: 'cube.obj', translation: board, color: "none"},
-{name: 'Pointer', url: 'pointer.obj', field: [4, 4], scale: 0.1, color: "none"},
-];
-figures = [
-{},
-{name: 'Bauer1', id: 1, url: 'weißerBauer.obj', field: [0, 1], scale: pawnScale, color: "w"},
-{name: 'Turm1', id: 2, url: 'weißerTurm.obj', field: [0, 0],scale: pawnScale, color: "w"},
-{name: 'Pferd1', id: 3, url: 'weißesPferd.obj', field: [1, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
-{name: 'Läufer1', id: 4, url: 'weißerLäufer.obj', field: [2, 0], scale: pawnScale, color: "w"},
-{name: 'Dame', id: 5, url: 'weißeDame.obj', field: [3, 0], scale: pawnScale, color: "w"},
-{name: 'König', id: 6, url: 'weißerKönig.obj', field: [4, 0], scale: pawnScale, color: "w"},
-
-{name: 'Bauer1', id: 7, url: 'schwarzerBauer.obj', field: [0, 6], scale: pawnScale, color: "b"},
-{name: 'Turm1', id: 8, url: 'schwarzerTurm.obj', field: [0, 7], scale: pawnScale, color: "b"},
-{name: 'Pferd1', id: 9, url: 'schwarzesPferd.obj', field: [6, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
-{name: 'Läufer1', id: 10, url: 'schwarzerLäufer.obj', field: [2, 7], scale: pawnScale, color: "b"},
-{name: 'Dame', id: 11, url: 'schwarzeDame.obj', field: [3, 7], scale: pawnScale, color: "b"},
-{name: 'König', id: 12, url: 'schwarzerKönig.obj', field: [4, 7], scale: pawnScale, color: "b"},
-];
-
-for (let i = 1; i < objects.length + figures.length; i++)	{
-	let curr;
-	if (i < figures.length)	{
-		curr = figures[i];
+	if (!gl)	{
+		alert("WebGL 2.0 wird nicht unterstützt");
 	}
-	else	{
-		curr = objects[i - figures.length];
-	}	
-	say(curr.name + " wird geladen...", curr.color);
-	let skip = false;
 
-let file = null;
-let response = await fetch(curr.url);
-if (response.ok)	{
-	file = await response.text();
-	document.getElementById("text").textContent = curr.name + " wird verarbeitet...";
-} else	{ alert("Ein Object konnte nicht geladen werden"); }	
+	const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
 
-await say( curr.name + " wird verarbeitet...", curr.color);
-await sleep(1);
 
-const obj = parseOBJ(file);
+	const programInfo =	{
+		program: shaderProgram,
+		attribLocations:	{
+			vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+			vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+			textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
+	},
+		uniformLocations:	{
+			projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+			cameraMatrix: gl.getUniformLocation(shaderProgram, 'uCameraMatrix'),
+			modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+			lightDirection: gl.getUniformLocation(shaderProgram, 'uLightDirection'),
+			ambientLight: gl.getUniformLocation(shaderProgram, 'uAmbientLight'),
+			uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+			cameraPosition: gl.getUniformLocation(shaderProgram, 'uCameraPosition'),
+	},
+	};
 
-curr.buffers = initBuffers(gl, obj);
-console.log("Verarbeitung Ende");
-}
+	const texture = loadTexture(gl, 'chessBoard.jpg');
 
-document.getElementById("text").textContent = "Warte auf 2. Spieler...";
+	objects = [
+	{name: 'Schachfeld', url: 'cube.obj', translation: board, color: "none"},
+	{name: 'Pointer', url: 'pointer.obj', field: [4, 4], scale: 0.1, color: "none"},
+	];
+	figures = [
+	{},
+	{name: 'Bauer1', id: 1, url: 'weißerBauer.obj', field: [0, 1], scale: pawnScale, color: "w"},
+	{name: 'Turm1', id: 2, url: 'weißerTurm.obj', field: [0, 0],scale: pawnScale, color: "w"},
+	{name: 'Pferd1', id: 3, url: 'weißesPferd.obj', field: [1, 0], scale: pawnScale, rotation: whiteHorseRotation, color: "w"},
+	{name: 'Läufer1', id: 4, url: 'weißerLäufer.obj', field: [2, 0], scale: pawnScale, color: "w"},
+	{name: 'Dame', id: 5, url: 'weißeDame.obj', field: [3, 0], scale: pawnScale, color: "w"},
+	{name: 'König', id: 6, url: 'weißerKönig.obj', field: [4, 0], scale: pawnScale, color: "w"},
 
-while (true)	{
-	if (full)	{
-		break;
+	{name: 'Bauer1', id: 7, url: 'schwarzerBauer.obj', field: [0, 6], scale: pawnScale, color: "b"},
+	{name: 'Turm1', id: 8, url: 'schwarzerTurm.obj', field: [0, 7], scale: pawnScale, color: "b"},
+	{name: 'Pferd1', id: 9, url: 'schwarzesPferd.obj', field: [6, 7], scale: pawnScale, rotation: blackHorseRotation, color: "b"},
+	{name: 'Läufer1', id: 10, url: 'schwarzerLäufer.obj', field: [2, 7], scale: pawnScale, color: "b"},
+	{name: 'Dame', id: 11, url: 'schwarzeDame.obj', field: [3, 7], scale: pawnScale, color: "b"},
+	{name: 'König', id: 12, url: 'schwarzerKönig.obj', field: [4, 7], scale: pawnScale, color: "b"},
+	];
+
+	for (let i = 1; i < objects.length + figures.length; i++)	{
+		let curr;
+		if (i < figures.length)	{
+			curr = figures[i];
+		}
+		else {
+			curr = objects[i - figures.length];
+		}
+		say(curr.name + " wird geladen...", curr.color);
+		let skip = false;
+
+		let file = null;
+		let response = await fetch(curr.url);
+		if (response.ok)	{
+			file = await response.text();
+			document.getElementById("text").textContent = curr.name + " wird verarbeitet...";
+		} else {
+			alert("Ein Object konnte nicht geladen werden");
+		}	
+
+		await say( curr.name + " wird verarbeitet...", curr.color);
+		await sleep(1);
+
+		const obj = parseOBJ(file);
+
+		curr.buffers = initBuffers(gl, obj);
+		console.log("Verarbeitung Ende");
 	}
-	playerJoined();
-	await sleep(1000);
-}
 
-if (whiteView)	{
-	toggleView("w");
-}
-else	{
-	toggleView("b");
-}
+	document.getElementById("text").textContent = "Warte auf 2. Spieler...";
 
-if (getCookie("session_turn") !== getCookie("session_color"))	{
-	updateLoop();
-}
+	while (true) {
+		if (full) {
+			break;
+		}
+		playerJoined();
+		await sleep(1000);
+	}
+
+	if (whiteView) {
+		toggleView("w");
+	}
+	else {
+		toggleView("b");
+	}
+
+	if (getCookie("session_turn") !== getCookie("session_color")) {
+		updateLoop();
+	}
 
 
-var then = 0;
+	var then = 0;
 
-field = textToArr(getCookie("session_field"));
-console.log(field);
+	field = textToArr(getCookie("session_field"));
+	console.log(field);
 
-function render(now)	{
-	
-	now *= 0.001;
-	const deltaTime = now -then;
-	then = now;
+	function render(now)	{
+		
+		now *= 0.001;
+		const deltaTime = now -then;
+		then = now;
 
-	drawScene(gl, programInfo, objects, texture, deltaTime, cameraView);
+		drawScene(gl, programInfo, objects, texture, deltaTime, cameraView);
 
+		requestAnimationFrame(render);
+	}
 	requestAnimationFrame(render);
-}
-requestAnimationFrame(render);
 
 }
-document.addEventListener("keydown", function(event) 	{
+
+document.addEventListener("keydown", function(event) {
 	console.log(event.keyCode);
 	let pointer = objects[1];
 	switch(event.keyCode)	{
@@ -1023,7 +1063,7 @@ function touchFigure()	{
 		if (activeField[0] == objects[1].field[0] && activeField[1] == objects[1].field[1])	{
 			activeField = null;
 		}
-		else	{
+		else {
 	
 			if (field[getIndex(objects[1].field)] !== 0)	{
 				console.log(field[getIndex(objects[1].field)]);
@@ -1058,22 +1098,24 @@ function say(text, color)	{
 	console.log(text);
 
 	let t = document.getElementById("text");
-	if (color == "w")	{	t.style.color = "WHITE";} 
-	else if(color == "b")		{t.style.color = "BLACK";}
-	else if(color !== undefined)	{t.style.color = color;}
-	else				{t.style.color = "BLACK";}
+	if (color == "w") { t.style.color = "WHITE";} 
+	else if(color == "b") {t.style.color = "BLACK";}
+	else if(color !== undefined) {t.style.color = color;}
+	else {t.style.color = "BLACK";}
 	t.textContent = text;
 }
-function assignpos(obj, pos)	{
+function assignpos(obj, pos) {
 	if (pos[0] < 0)	{pos[0] = 0;}
 	if (pos[0] > 7) {pos[0] = 7;}
 	if (pos[1] < 0)	{pos[1] = 0;}
 	if (pos[1] > 7)	{pos[1] = 7;}
 	obj.field = pos;
 }
+
 function sleep(ms) {
-	  return new Promise(resolve => setTimeout(resolve, ms));
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 function getCookie(cName) {
 	const name = cName + "=";
 	const cDecoded = decodeURIComponent(document.cookie); //to be careful
@@ -1086,12 +1128,11 @@ function getCookie(cName) {
 }
 
 function getField(i)    {
-	        return [i%8, Math.floor(i/8)];
+	return [i%8, Math.floor(i/8)];
 }
 function getIndex(arr)  {
-	        return arr[0] + arr[1]*8;
+	return arr[0] + arr[1]*8;
 }
-
 
 main();
 
