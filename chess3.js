@@ -6,12 +6,13 @@ in vec4 a_position;
 in vec4 a_color;
 
 uniform mat4 u_matrix;
+uniform mat4 u_camera;
 
 out vec4 v_color;
 
 void main() {
   // Multiply the position by the matrix.
-  gl_Position = u_matrix * a_position;
+  gl_Position = u_camera * u_matrix * a_position;
 
   // Pass the color to the fragment shader.
   v_color = a_color;
@@ -33,7 +34,127 @@ void main() {
 }
 `;
 
-function main() {
+async function fetchOBJ(url) {
+  const response = await fetch(url);
+  const text = await response.text();
+
+  return parseOBJ(text);
+}
+
+function parseOBJ(text) {
+
+  const objPositions = [[0, 0, 0]];
+  const objTexcoords = [[0, 0]];
+  const objNormals = [[0, 0, 0]];
+
+  const objVertexData = [
+    objPositions,
+    objTexcoords,
+    objNormals,
+  ];
+
+  let webglVertexData = [
+    [],
+    [],
+    [],
+  ];
+
+  let material = "none";
+
+
+  const keywordRE = /(\w*)(?: )/;
+  const lines = text.split("\n");
+  for (let lineNr = 0; lineNr < lines.length; ++lineNr)  {
+    const line = lines[lineNr].trim();
+    if (line === '' || line.startsWith('#'))  {
+      continue;
+    }
+    const parts = line.split(/\s+/);
+    const m = keywordRE.exec(line);
+    if(!m)  {
+      continue;
+    }
+    const keyword = parts[0];
+    parts.shift();
+    switch(keyword)  {
+    case 'o':
+      break;
+    case 'v':
+      objPositions.push(v(parts));
+      break;
+    case 'vt':
+      objTexcoords.push(vt(parts));
+      break;
+    case 'vn':
+      objNormals.push(vn(parts));
+      break;
+    case 'usemtl':
+      material = parts[0];
+      break;
+    case 'f':
+      if (parts.length == 3)  {
+      for (let i = 0; i < 3; i++)  {
+        let arr = f3(parts[i]);
+        assign(arr);
+      }
+      }
+      else if (parts.length == 4)  {
+      for (let i = 0; i < 3; i++)  {
+        assign(f3(parts[i]));
+        
+      }
+      assign(f3(parts[0]));
+      assign(f3(parts[2]));
+      assign(f3(parts[3]));
+      }
+      break;
+    default:
+      console.log("Unhandled keyword line " + lineNr + ": " + keyword);
+    }
+
+
+  }
+  console.log(objVertexData);
+
+  return {
+    arrays: {
+      position: webglVertexData[0],
+      texcoord: webglVertexData[1],
+      normal: webglVertexData[2],
+    },
+    material: material,
+  };
+
+  function assign(arr) {
+    webglVertexData[0].push(arr.position[0], arr.position[1], arr.position[2]);
+    webglVertexData[1].push(arr.texcoord[0], arr.texcoord[1]);
+    webglVertexData[2].push(arr.normal[0], arr.normal[1], arr.normal[2]);
+  }
+  function o(parts) { return parts[0]; }
+  function v(parts) { return [parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])]; }
+  function vt(parts) { return [parseFloat(parts[0]), parseFloat(parts[1])]; }
+  function vn(parts) {return [parseFloat(parts[0]), parseFloat(parts[1]), parseFloat(parts[2])]; }
+  function f3(part) { 
+      
+    let indices = part.split("/");
+
+    let position = objVertexData[0][indices[0]];
+    let texcoord = objVertexData[1][indices[1]];
+    let normal = objVertexData[2][indices[2]];
+    
+    return {position: position, texcoord: texcoord, normal: normal};
+  }
+  function usemtl(parts)  { return parts[0]; }
+}
+
+function toObject(gl, meshProgramInfo, objData) {
+  const bufferInfo = twgl.createBufferInfoFromArrays(gl, objData.arrays);
+  const vao = twgl.createVAOFromBufferInfo(gl, meshProgramInfo, bufferInfo);
+
+  return { bufferInfo, vao, material: objData.material };
+}
+
+async function main() {
   // Get A WebGL context
   /** @type {HTMLCanvasElement} */
   var canvas = document.querySelector("#c");
@@ -57,6 +178,8 @@ function main() {
   var cubeVAO   = twgl.createVAOFromBufferInfo(gl, programInfo, cubeBufferInfo);
   var coneVAO   = twgl.createVAOFromBufferInfo(gl, programInfo, coneBufferInfo);
 
+  var figure = toObject(gl, programInfo, await fetchOBJ('bauer.obj'));
+
   function degToRad(d) {
     return d * Math.PI / 180;
   }
@@ -77,9 +200,10 @@ function main() {
 
   // put the shapes in an array so it's easy to pick them at random
   var shapes = [
-    { bufferInfo: sphereBufferInfo, vertexArray: sphereVAO, },
-    { bufferInfo: cubeBufferInfo,   vertexArray: cubeVAO,   },
-    { bufferInfo: coneBufferInfo,   vertexArray: coneVAO,   },
+    // { bufferInfo: sphereBufferInfo, vertexArray: sphereVAO, },
+    // { bufferInfo: cubeBufferInfo,   vertexArray: cubeVAO,   },
+    // { bufferInfo: coneBufferInfo,   vertexArray: coneVAO,   },
+    { bufferInfo: figure.bufferInfo, vertexArray: figure.vao, },
   ];
 
   var objectsToDraw = [];
@@ -100,7 +224,7 @@ function main() {
       },
       translation: [rand(-100, 100), rand(-100, 100), rand(-150, -50)],
       rotation: [0, 0, 0], // TODO: Use quaternion instead of euler
-      scale: [1, 1, 1],
+      scale: [10, 10, 10],
     };
     objects.push(object);
 
@@ -114,15 +238,13 @@ function main() {
   }
 
   function computeMatrix(viewProjectionMatrix, translation, rotation, scale) {
-    var matrix = m4.translate(viewProjectionMatrix,
-        translation[0],
-        translation[1],
-        translation[2]);
+    var matrix = m4.translation(translation[0], translation[1], translation[2]);
+    // var matrix = m4.translation(translation);
     matrix = m4.xRotate(matrix, rotation[0]);
     matrix = m4.yRotate(matrix, rotation[1]);
     matrix = m4.zRotate(matrix, rotation[2]);
-    // TODO: Scale
-    // matrix = m4.
+    matrix = m4.scale(matrix, scale[0], scale[1], scale[2]);
+    // return m4.multiply(viewProjectionMatrix, matrix);
     return matrix;
   }
 
@@ -159,7 +281,7 @@ function main() {
     // Compute the matrices for each object.
     objects.forEach(function(object) {
       object.uniforms.u_matrix = computeMatrix(
-          viewProjectionMatrix,
+        viewProjectionMatrix,
           object.translation,
           object.rotation,
           object.scale);
@@ -187,6 +309,7 @@ function main() {
 
       // Set the uniforms.
       twgl.setUniforms(programInfo, object.uniforms);
+      twgl.setUniforms(programInfo, {u_camera: viewProjectionMatrix});
 
       // Draw
       twgl.drawBufferInfo(gl, object.bufferInfo);

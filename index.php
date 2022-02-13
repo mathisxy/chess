@@ -143,6 +143,7 @@ function getUpdate()	{
         req.withCredentials = true;
         req.send();
 }
+// main();
 </script>
 <?php
 if (isset($_GET['nl']))	{
@@ -242,6 +243,15 @@ background-color: black;
 width: 100%;
 height: calc(99vh);
 }
+canvas {
+  background-color: #fff;
+  border: 1px solid black;
+  /* NOTE: This size is changed if in iframe - see below '.iframe canvas' */
+  /* width: 400px;
+  height: 300px; */
+  display: block;
+}
+
 #text {
 position: fixed;
 top: 0;
@@ -276,8 +286,10 @@ text-align: center;
 <script src="https://webgl2fundamentals.org/webgl/resources/m4.js"></script>
 <script src="https://webgl2fundamentals.org/webgl/resources/texture-utils.js"></script>
 <script src="https://webgl2fundamentals.org/webgl/resources/chroma.min.js"></script>
+<script src="https://webgl2fundamentals.org/webgl/resources/flattened-primitives.js"></script>
+<!-- <script src="twgl.primitives.createCubeVertices"></script> -->
 
-<script src="stolen2.js"></script>
+<script src="chess2.js"></script>
 
 </body>
 </html>
