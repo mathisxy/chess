@@ -4,7 +4,7 @@ var vs = `#version 300 es
 
 in vec4 a_position;
 in vec3 a_normal;
-in vec4 a_texcoord;
+in vec2 a_texcoord;
 
 uniform mat4 u_matrix;
 uniform mat4 u_projection;
@@ -155,7 +155,79 @@ function toWebGL(gl, meshProgramInfo, objData) {
   return { bufferInfo, vao, material: objData.material };
 }
 
+const a1	= [-0.88, -1.1, 0.88];
+const h1 	= [0.88, -1.1, 0.88];
+const a8	= [-0.88, -1.1, -0.88];
+const board 	= [0.0, -1.2, 0.0];
+const pawnScale = 0.24;
+const whiteHorseRotation = 0.7854 *2;
+const blackHorseRotation = 2.3562 *2;
+
+var camera = {
+  position: [0, 0, 5],
+  target: board,
+  up: [0, 1, 0],
+  fov: 60 * Math.PI / 180,
+};
+
+function getCoords(pos)	{
+	return [a1[0] + pos[0]/7*(h1[0]-a1[0]), a1[1], a1[2] + pos[1]/7*(a8[2]-a1[2])]; 
+}
+
+function getCookie(cName) {
+	const name = cName + "=";
+	const cDecoded = decodeURIComponent(document.cookie); //to be careful
+	const cArr = cDecoded .split('; ');
+	let res;
+	cArr.forEach(val => {
+	if (val.indexOf(name) === 0) res = val.substring(name.length);
+	})
+		return res;
+}
+
+function toggleView(color)	{
+  if (color == whiteView ? "b" : "w") {
+		camera.position[0] = board[0] - camera.position[0];
+		camera.position[1] = board[1] - camera.position[1];
+  }
+	if (color == "w")	{
+		whiteView = true;
+	}
+	else if (color == "b")	{
+		whiteView = false;
+	}
+}
+
 async function main() {
+	if (typeof whiteView === 'undefined')	{
+		alert("Bitte die Lobby verwenden um einem Spiel beizutreten");
+		window.location.replace("lobby.php");
+	}
+
+	document.getElementById("text").textContent = "Warte auf 2. Spieler...";
+
+	while (true) {
+		if (full) {
+			break;
+		}
+		playerJoined();
+		await sleep(1000);
+	}
+
+	if (whiteView) {
+		toggleView("w");
+	}
+	else {
+		toggleView("b");
+	}
+
+	if (getCookie("session_turn") !== getCookie("session_color")) {
+		updateLoop();
+	}
+
+	field = textToArr(getCookie("session_field"));
+	console.log(field);
+
   // Get A WebGL context
   /** @type {HTMLCanvasElement} */
   var canvas = document.querySelector("#c");
@@ -180,7 +252,7 @@ async function main() {
     bishop: toWebGL(gl, programInfo, await fetchOBJ('weißerLäufer.obj')),
   }
 
-  var figureByNumber = [figures.pawn, figures.tower, figures.bishop, figures.horse, figures.king, figures.queen];
+  var figuresByNumber = [figures.pawn, figures.tower, figures.bishop, figures.horse, figures.king, figures.queen];
 
   function makeObject(shape, translation, rotation, scale, material) {
     return {
@@ -198,10 +270,6 @@ async function main() {
     };
   }
 
-  function degToRad(d) { return d * Math.PI / 180; }
-
-  var fieldOfViewRadians = degToRad(60);
-
   const textures = twgl.createTextures(gl, {
     white: {src: [255, 255, 255, 255]},
     black: {src: [50, 50, 50, 255]},
@@ -209,16 +277,17 @@ async function main() {
   });
   
   var objects = [];
-  makeObject
-  fields
 
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
-      const figure = fields[[i, j]] - 1;
+      const figure = field[i*8+ j] - 1;
       if (figure < 0) continue;
       const isBlack = figure >= 6;
-      const shape = figures[figure % 6];
-      objects.push(makeObject(shape, ))
+      const shape = figuresByNumber[figure % 6];
+      const rotation = figure % 6 != 4 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
+      const scale = pawnScale;
+      const material = isBlack ? "black" : "white";
+      objects.push(makeObject(shape, getCoords([i, j]), [0, 0, rotation], [scale, scale, scale], material))
     }
   }
 
@@ -250,13 +319,10 @@ async function main() {
     // Compute the projection matrix
     var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     var projectionMatrix =
-        m4.perspective(fieldOfViewRadians, aspect, 1, 2000);
+        m4.perspective(camera.fov, aspect, 1, 2000);
 
     // Compute the camera's matrix using look at.
-    var cameraPosition = [0, 0, 100];
-    var target = [0, 0, 0];
-    var up = [0, 1, 0];
-    var cameraMatrix = m4.lookAt(cameraPosition, target, up);
+    var cameraMatrix = m4.lookAt(camera.position, camera.target, camera.up);
 
     // Make a view matrix from the camera matrix.
     var viewMatrix = m4.inverse(cameraMatrix);
