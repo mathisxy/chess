@@ -243,14 +243,6 @@ background-color: black;
 width: 100%;
 height: calc(99vh);
 }
-canvas {
-  background-color: #fff;
-  border: 1px solid black;
-  /* NOTE: This size is changed if in iframe - see below '.iframe canvas' */
-  /* width: 400px;
-  height: 300px; */
-  display: block;
-}
 
 #text {
 position: fixed;

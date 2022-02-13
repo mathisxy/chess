@@ -158,15 +158,17 @@ function toWebGL(gl, meshProgramInfo, objData) {
 const a1	= [-0.88, -1.1, 0.88];
 const h1 	= [0.88, -1.1, 0.88];
 const a8	= [-0.88, -1.1, -0.88];
-const board 	= [0.0, -1.2, 0.0];
+const board 	= [0.0, 0.0, 0.0];
 const pawnScale = 0.24;
 const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
+var pointer = null;
+var objects = [];
 
 var camera = {
   position: [0, 0, 5],
   target: board,
-  up: [0, 1, 0],
+  up: [0, 0, 1],
   fov: 60 * Math.PI / 180,
 };
 
@@ -196,6 +198,52 @@ function toggleView(color)	{
 	else if (color == "b")	{
 		whiteView = false;
 	}
+}
+
+document.addEventListener("keydown", function(event) {
+	console.log(event.keyCode);
+	let pointer = objects[1];
+	switch(event.keyCode)	{
+	// case 37:
+	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]);}
+	// 	else	{assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]);} return;
+	// case 38:
+	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0], pointer.field[1] +1]);}
+	// 	else	{assignpos(pointer, [pointer.field[0], pointer.field[1] -1])}	return;
+	// case 39:
+	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]); }
+	// 	else	{assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]);} return;
+	// case 40:
+	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0], pointer.field[1] -1]);}
+	// 	else	{assignpos(pointer, [pointer.field[0], pointer.field[1] +1])}	return;
+	// case 32:
+	// 	touchFigure(); return;
+	// case 13:
+	// 	if (getCookie("session_turn") == getCookie("session_color")) {submitTurn();} else {alert("Du bist nicht an der Reihe");} console.log(getCookie("session_turn") + getCookie("session_color")); return;
+	case 86:
+		if (whiteView)	{toggleView("b");} else {toggleView("w")}; return;
+	// case 65:
+	// 	sceneRotation += 0.01; return;
+	// case 68:
+	// 	sceneRotation += -0.01; return;
+	// case 87:
+	// 	toggleSceneAngle(2); return;
+	// case 83:
+	// 	toggleSceneAngle(1); return;
+	// case 85:
+	// 	getUpdate(); return;
+	// case 72:
+	// 	if (document.getElementById("hints").style.display == "none")	{document.getElementById("hints").style.display = "block";} else {document.getElementById("hints").style.display = "none";} return;
+	// case 27:
+	// 	leave(); return;
+	default:
+		console.log("No matching keyCode event");
+	}
+});
+
+function update(time) {
+  pointer.rotation.z = time;
+  camera.position = m4.transformPoint(m4.zRotation(time), [0, 1, 5]);
 }
 
 async function main() {
@@ -243,16 +291,18 @@ async function main() {
   // setup GLSL program
   var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
-  var figures = {
+  var models = {
     pawn: toWebGL(gl, programInfo, await fetchOBJ('weißerBauer.obj')),
     king: toWebGL(gl, programInfo, await fetchOBJ('weißerKönig.obj')),
     queen: toWebGL(gl, programInfo, await fetchOBJ('weißeDame.obj')),
     tower: toWebGL(gl, programInfo, await fetchOBJ('weißerTurm.obj')),
     horse: toWebGL(gl, programInfo, await fetchOBJ('weißesPferd.obj')),
     bishop: toWebGL(gl, programInfo, await fetchOBJ('weißerLäufer.obj')),
+    board: toWebGL(gl, programInfo, await fetchOBJ('cube.obj')),
+    pointer: toWebGL(gl, programInfo, await fetchOBJ('pointer.obj')),
   }
 
-  var figuresByNumber = [figures.pawn, figures.tower, figures.bishop, figures.horse, figures.king, figures.queen];
+  var figuresByNumber = [models.pawn, models.tower, models.bishop, models.horse, models.king, models.queen];
 
   function makeObject(shape, translation, rotation, scale, material) {
     return {
@@ -275,8 +325,11 @@ async function main() {
     black: {src: [50, 50, 50, 255]},
     board: {src: "chessBoard.jpg"},
   });
-  
-  var objects = [];
+
+  objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], "board"));
+
+  pointer = makeObject(models.pointer, getCoords([4, 4]), [0, 0, 0], [.1, .1, .1], "board");
+  objects.push(pointer);
 
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
@@ -284,10 +337,10 @@ async function main() {
       if (figure < 0) continue;
       const isBlack = figure >= 6;
       const shape = figuresByNumber[figure % 6];
-      const rotation = figure % 6 != 4 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
+      const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
       const material = isBlack ? "black" : "white";
-      objects.push(makeObject(shape, getCoords([i, j]), [0, 0, rotation], [scale, scale, scale], material))
+      objects.push(makeObject(shape, getCoords([i, j]), [0, 0, rotation], [scale, scale, scale], material));
     }
   }
 
@@ -307,6 +360,7 @@ async function main() {
   // Draw the scene.
   function drawScene(time) {
     time = time * 0.0005;
+    update(time);
 
     twgl.resizeCanvasToDisplaySize(gl.canvas);
 
