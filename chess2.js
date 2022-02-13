@@ -74,11 +74,11 @@ void main() {
   vec3 halfVector = normalize(surfaceToLight + surfaceToView);
   vec4 litR = lit(dot(a_normal, surfaceToLight),
                     dot(a_normal, halfVector), u_shininess);
-  vec4 outColor = vec4((
+  vec4 finalColor = vec4((
   u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
                 u_specular * litR.z * u_specularFactor)).rgb,
       diffuseColor.a);
-  outColor = outColor;
+  outColor = vec4(1,1,1,1);//finalColor;
 }
 `;
 
@@ -358,7 +358,7 @@ async function main() {
       bufferInfo: shape.bufferInfo,
       vertexArray: shape.vao,
       uniforms: {
-        u_matrix: m4.identity(),
+        u_instanceWorld: m4.identity(),
       },
       translation: translation,
       rotation: rotation, // TODO: Use quaternion instead of euler
@@ -430,7 +430,7 @@ async function main() {
 
     // Compute the matrices for each object.
     objects.forEach(function(object) {
-      object.uniforms.u_matrix = computeMatrix(
+      object.uniforms.u_instanceWorld = computeMatrix(
           object.translation,
           object.rotation,
           object.scale);
@@ -438,7 +438,7 @@ async function main() {
     });
 
     const sharedUniforms = {
-      u_viewProjection: cameraMatrix,
+      u_viewProjection: m4.multiply(projectionMatrix, viewMatrix),
       u_viewInverse: cameraMatrix,
 
       u_lightWorldPos: [1, 8, -30],
