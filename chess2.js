@@ -78,7 +78,7 @@ void main() {
   u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
                 u_specular * litR.z * u_specularFactor)).rgb,
       diffuseColor.a);
-  outColor = vec4(1,1,1,1);//finalColor;
+  outColor = finalColor;
 }
 `;
 
