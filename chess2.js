@@ -4,19 +4,18 @@ var vs = `#version 300 es
 
 in vec4 a_position;
 in vec3 a_normal;
-// in vec4 a_color;
+in vec4 a_texcoord;
 
 uniform mat4 u_matrix;
 uniform mat4 u_projection;
 
+out vec2 v_texcoord;
 out vec4 v_color;
 
 void main() {
-  // Multiply the position by the matrix.
   gl_Position = u_projection * u_matrix * a_position;
 
-  // Pass the color to the fragment shader.
-  // v_color = a_color;
+  v_texcoord = a_texcoord;
   v_color = vec4(1, 1, 1, 1);
 }
 `;
@@ -24,15 +23,15 @@ void main() {
 var fs = `#version 300 es
 precision highp float;
 
-// Passed in from the vertex shader.
+in vec2 v_texcoord;
 in vec4 v_color;
 
-uniform vec4 u_colorMult;
+uniform sampler2D u_texture;
 
 out vec4 outColor;
 
 void main() {
-   outColor = vec4(0,1,1,1);//v_color * u_colorMult;
+   outColor = texture(u_texture, v_texcoord);
 }
 `;
 
@@ -149,7 +148,7 @@ function parseOBJ(text) {
   function usemtl(parts)  { return parts[0]; }
 }
 
-function toObject(gl, meshProgramInfo, objData) {
+function toWebGL(gl, meshProgramInfo, objData) {
   const bufferInfo = twgl.createBufferInfoFromArrays(gl, objData.arrays);
   const vao = twgl.createVAOFromBufferInfo(gl, meshProgramInfo, bufferInfo);
 
@@ -172,44 +171,19 @@ async function main() {
   // setup GLSL program
   var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
-  var figure = toObject(gl, programInfo, await fetchOBJ('bauer.obj'));
-  figure.material = { u_diffuse: [1, 1, 1, 1] };
-
-  function degToRad(d) {
-    return d * Math.PI / 180;
+  var figures = {
+    pawn: toWebGL(gl, programInfo, await fetchOBJ('weißerBauer.obj')),
+    king: toWebGL(gl, programInfo, await fetchOBJ('weißerKönig.obj')),
+    queen: toWebGL(gl, programInfo, await fetchOBJ('weißeDame.obj')),
+    tower: toWebGL(gl, programInfo, await fetchOBJ('weißerTurm.obj')),
+    horse: toWebGL(gl, programInfo, await fetchOBJ('weißesPferd.obj')),
+    bishop: toWebGL(gl, programInfo, await fetchOBJ('weißerLäufer.obj')),
   }
 
-  function rand(min, max) {
-    if (max === undefined) {
-      max = min;
-      min = 0;
-    }
-    return Math.random() * (max - min) + min;
-  }
+  var figureByNumber = [figures.pawn, figures.tower, figures.bishop, figures.horse, figures.king, figures.queen];
 
-  function emod(x, n) {
-    return x >= 0 ? (x % n) : ((n - (-x % n)) % n);
-  }
-
-  var fieldOfViewRadians = degToRad(60);
-
-  // put the shapes in an array so it's easy to pick them at random
-  var shapes = [
-    // { bufferInfo: sphereBufferInfo, vertexArray: sphereVAO, material: null },
-    figure
-  ];
-  
-  var objects = [];
-
-  // Make infos for each object for each object.
-  var baseHue = rand(360);
-  var numObjects = 200;
-  for (var ii = 0; ii < numObjects; ++ii) {
-    // pick a shape
-    var shape = shapes[rand(shapes.length) | 0];
-
-    // make an object.
-    var object = {
+  function makeObject(shape, translation, rotation, scale, material) {
+    return {
       programInfo: programInfo,
       isVisible: true,
       bufferInfo: shape.bufferInfo,
@@ -217,11 +191,35 @@ async function main() {
       uniforms: {
         u_matrix: m4.identity(),
       },
-      translation: [rand(-100, 100), rand(-100, 100), rand(-150, -50)],
-      rotation: [0, 0, 0], // TODO: Use quaternion instead of euler
-      scale: [10, 10, 10],
+      translation: translation,
+      rotation: rotation, // TODO: Use quaternion instead of euler
+      scale: scale,
+      material: material,
     };
-    objects.push(object);
+  }
+
+  function degToRad(d) { return d * Math.PI / 180; }
+
+  var fieldOfViewRadians = degToRad(60);
+
+  const textures = twgl.createTextures(gl, {
+    white: {src: [255, 255, 255, 255]},
+    black: {src: [50, 50, 50, 255]},
+    board: {src: "chessBoard.jpg"},
+  });
+  
+  var objects = [];
+  makeObject
+  fields
+
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      const figure = fields[[i, j]] - 1;
+      if (figure < 0) continue;
+      const isBlack = figure >= 6;
+      const shape = figures[figure % 6];
+      objects.push(makeObject(shape, ))
+    }
   }
 
   function computeMatrix(translation, rotation, scale) {
