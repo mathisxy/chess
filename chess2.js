@@ -1,37 +1,84 @@
 "use strict";
 
 var vs = `#version 300 es
+precision highp float;
 
 in vec4 a_position;
 in vec3 a_normal;
 in vec2 a_texcoord;
 
-uniform mat4 u_matrix;
-uniform mat4 u_projection;
+uniform mat4 u_instanceWorld;
 
+uniform mat4 u_viewProjection;
+uniform vec3 u_lightWorldPos;
+uniform mat4 u_viewInverse;
+
+out vec4 v_position;
+out vec3 v_normal;
 out vec2 v_texcoord;
-out vec4 v_color;
+out vec3 v_viewToSurface;
+out vec3 v_surfaceToLight;
+out vec3 v_surfaceToView;
 
 void main() {
-  gl_Position = u_projection * u_matrix * a_position;
+  // gl_Position = u_projection * u_matrix * a_position;
 
-  v_texcoord = a_texcoord;
-  v_color = vec4(1, 1, 1, 1);
+  // v_texcoord = a_texcoord;
+  // v_color = vec4(1, 1, 1, 1);
+
+  // v_viewToSurface = (uCameraMatrix * uModelViewMatrix * aVertexPosition).xyz - (uCameraPosition *-1.0);
+  // vTextureCoord = aTextureCoord;
+  // vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
+  
+  vec4 worldPosition = u_instanceWorld * a_position;
+  v_position = u_viewProjection * worldPosition;
+  v_normal = (u_instanceWorld * vec4(a_normal, 0)).xyz;
+  v_surfaceToLight = u_lightWorldPos - worldPosition.xyz;
+  v_surfaceToView = u_viewInverse[3].xyz - worldPosition.xyz;
+  gl_Position = v_position;
 }
 `;
 
 var fs = `#version 300 es
 precision highp float;
 
+in vec4 v_position;
+in vec3 v_normal;
 in vec2 v_texcoord;
-in vec4 v_color;
+in vec3 v_viewToSurface;
+in vec3 v_surfaceToLight;
+in vec3 v_surfaceToView;
 
 uniform sampler2D u_texture;
 
+uniform vec4 u_lightColor;
+uniform vec4 u_ambient;
+uniform vec4 u_specular;
+uniform float u_shininess;
+uniform float u_specularFactor;
+
 out vec4 outColor;
 
+vec4 lit(float l ,float h, float m) {
+  return vec4(1.0,
+              max(l, 0.0),
+              (l > 0.0) ? pow(max(0.0, h), m) : 0.0,
+              1.0);
+}
+
 void main() {
-   outColor = texture(u_texture, v_texcoord);
+  vec4 diffuseColor = texture(u_texture, v_texcoord);
+  vec3 a_normal = normalize(v_normal);
+  vec3 surfaceToLight = normalize(v_surfaceToLight);
+  vec3 surfaceToView = normalize(v_surfaceToView);
+  vec3 halfVector = normalize(surfaceToLight + surfaceToView);
+  vec4 litR = lit(dot(a_normal, surfaceToLight),
+                    dot(a_normal, halfVector), u_shininess);
+  vec4 outColor = vec4((
+  u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
+                u_specular * litR.z * u_specularFactor)).rgb,
+      diffuseColor.a);
+  outColor = outColor;
 }
 `;
 
@@ -158,7 +205,7 @@ function toWebGL(gl, meshProgramInfo, objData) {
 const a1	= [-0.88, -1.1, 0.88];
 const h1 	= [0.88, -1.1, 0.88];
 const a8	= [-0.88, -1.1, -0.88];
-const board 	= [0.0, 0.0, 0.0];
+const board 	= [0.0, -1.2, 0.0];
 const pawnScale = 0.24;
 const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
@@ -168,7 +215,7 @@ var objects = [];
 var camera = {
   position: [0, 0, 5],
   target: board,
-  up: [0, 0, 1],
+  up: [0, 1, 0],
   fov: 60 * Math.PI / 180,
 };
 
@@ -243,7 +290,7 @@ document.addEventListener("keydown", function(event) {
 
 function update(time) {
   pointer.rotation.z = time;
-  camera.position = m4.transformPoint(m4.zRotation(time), [0, 1, 5]);
+  camera.position = m4.transformPoint(m4.yRotation(time), [0, .2, 2]);
 }
 
 async function main() {
@@ -340,7 +387,7 @@ async function main() {
       const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
       const material = isBlack ? "black" : "white";
-      objects.push(makeObject(shape, getCoords([i, j]), [0, 0, rotation], [scale, scale, scale], material));
+      objects.push(makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material));
     }
   }
 
@@ -381,19 +428,25 @@ async function main() {
     // Make a view matrix from the camera matrix.
     var viewMatrix = m4.inverse(cameraMatrix);
 
-    var viewProjectionMatrix = m4.multiply(projectionMatrix, viewMatrix);
-
     // Compute the matrices for each object.
     objects.forEach(function(object) {
       object.uniforms.u_matrix = computeMatrix(
           object.translation,
           object.rotation,
           object.scale);
+      object.uniforms.u_texture = textures[object.material];
     });
 
     const sharedUniforms = {
-      u_lightDirection: m4.normalize([-1, 3, 5]),
-      u_projection: viewProjectionMatrix,
+      u_viewProjection: cameraMatrix,
+      u_viewInverse: cameraMatrix,
+
+      u_lightWorldPos: [1, 8, -30],
+      u_lightColor: [1, 1, 1, 1],
+      u_ambient: [0, 0, 0, 1],
+      u_specular: [1, 1, 1, 1],
+      u_shininess: 50,
+      u_specularFactor: 1,
     };
 
     // ------ Draw the objects --------
