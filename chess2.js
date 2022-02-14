@@ -21,14 +21,7 @@ out vec3 v_surfaceToLight;
 out vec3 v_surfaceToView;
 
 void main() {
-  // gl_Position = u_projection * u_matrix * a_position;
-
-  // v_texcoord = a_texcoord;
-  // v_color = vec4(1, 1, 1, 1);
-
-  // v_viewToSurface = (uCameraMatrix * uModelViewMatrix * aVertexPosition).xyz - (uCameraPosition *-1.0);
-  // vTextureCoord = aTextureCoord;
-  // vVertexNormal = mat3(uModelViewMatrix) * aVertexNormal;
+  v_texcoord = a_texcoord;
   
   vec4 worldPosition = u_instanceWorld * a_position;
   v_position = u_viewProjection * worldPosition;
@@ -67,6 +60,42 @@ vec4 lit(float l ,float h, float m) {
               1.0);
 }
 
+float DistributionGGX(vec3 N, vec3 H, float a)
+{
+  float a2     = a*a;
+  float NdotH  = max(dot(N, H), 0.0);
+  float NdotH2 = NdotH*NdotH;
+
+  float nom    = a2;
+  float denom  = (NdotH2 * (a2 - 1.0) + 1.0);
+  denom        = 3.141592653589793 * denom * denom;
+
+  return nom / denom;
+}
+
+float GeometrySchlickGGX(float NdotV, float k)
+{
+  float nom   = NdotV;
+  float denom = NdotV * (1.0 - k) + k;
+
+  return nom / denom;
+}
+  
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float k)
+{
+  float NdotV = max(dot(N, V), 0.0);
+  float NdotL = max(dot(N, L), 0.0);
+  float ggx1 = GeometrySchlickGGX(NdotV, k);
+  float ggx2 = GeometrySchlickGGX(NdotL, k);
+
+  return ggx1 * ggx2;
+}
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0)
+{
+  return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
 void main() {
   vec4 diffuseColor = texture(u_texture, v_texcoord);
   vec3 a_normal = normalize(v_normal);
@@ -75,6 +104,9 @@ void main() {
 
   vec3 halfVector = normalize(surfaceToLight + surfaceToView);
 
+  vec3 reflectDir = reflect(surfaceToView, v_normal);
+  vec4 reflectColor = texture(u_skybox, reflectDir);
+
   vec4 litR = lit(dot(a_normal, surfaceToLight),
                     dot(a_normal, halfVector), u_shininess);
 
@@ -82,18 +114,18 @@ void main() {
       (u_lightColor
         * (diffuseColor * litR.y
           + diffuseColor * u_ambient
-          + u_specular * litR.z * u_specularFactor)
+          + reflectColor * u_specular * litR.z * u_specularFactor)
       ).rgb,
       diffuseColor.a);
 
-  vec3 reflectDir = reflect(surfaceToView, v_normal);
-
-  // outColor = finalColor;
-  outColor = texture(u_skybox, reflectDir);
+  outColor = finalColor;
+  // outColor = vec4(v_texcoord.x * 1.0, v_texcoord.y * 1.0, 1, 1);
+  // outColor = texture(u_skybox, normalize(vec3(a_position)));
 }
 `;
 
 async function fetchOBJ(url) {
+  say(url + " wird geladen...", null);
   const response = await fetch(url);
   const text = await response.text();
 
@@ -123,19 +155,19 @@ function parseOBJ(text) {
 
   const keywordRE = /(\w*)(?: )/;
   const lines = text.split("\n");
-  for (let lineNr = 0; lineNr < lines.length; ++lineNr)  {
+  for (let lineNr = 0; lineNr < lines.length; ++lineNr) {
     const line = lines[lineNr].trim();
-    if (line === '' || line.startsWith('#'))  {
+    if (line === '' || line.startsWith('#')) {
       continue;
     }
     const parts = line.split(/\s+/);
     const m = keywordRE.exec(line);
-    if(!m)  {
+    if(!m) {
       continue;
     }
     const keyword = parts[0];
     parts.shift();
-    switch(keyword)  {
+    switch(keyword) {
     case 'o':
       break;
     case 'v':
@@ -151,14 +183,14 @@ function parseOBJ(text) {
       material = parts[0];
       break;
     case 'f':
-      if (parts.length == 3)  {
-      for (let i = 0; i < 3; i++)  {
+      if (parts.length == 3) {
+      for (let i = 0; i < 3; i++) {
         let arr = f3(parts[i]);
         assign(arr);
       }
       }
-      else if (parts.length == 4)  {
-      for (let i = 0; i < 3; i++)  {
+      else if (parts.length == 4) {
+      for (let i = 0; i < 3; i++) {
         assign(f3(parts[i]));
         
       }
@@ -203,7 +235,7 @@ function parseOBJ(text) {
     
     return {position: position, texcoord: texcoord, normal: normal};
   }
-  function usemtl(parts)  { return parts[0]; }
+  function usemtl(parts) { return parts[0]; }
 }
 
 function toWebGL(gl, meshProgramInfo, objData) {
@@ -213,15 +245,37 @@ function toWebGL(gl, meshProgramInfo, objData) {
   return { bufferInfo, vao, material: objData.material };
 }
 
-const a1	= [-0.88, -1.1, 0.88];
-const h1 	= [0.88, -1.1, 0.88];
-const a8	= [-0.88, -1.1, -0.88];
-const board 	= [0.0, -1.2, 0.0];
+function getCoords(pos) {
+  return [a1[0] + pos[0]/7*(h1[0]-a1[0]), a1[1], a1[2] + pos[1]/7*(a8[2]-a1[2])]; 
+}
+
+function getCookie(cName) {
+  const name = cName + "=";
+  const cDecoded = decodeURIComponent(document.cookie); //to be careful
+  const cArr = cDecoded .split('; ');
+  let res;
+  cArr.forEach(val => {
+  if (val.indexOf(name) === 0) res = val.substring(name.length);
+  })
+    return res;
+}
+
+// --------------------------------------
+//               Globals
+// --------------------------------------
+
+const a1  = [-0.88, -1.1, 0.88];
+const h1   = [0.88, -1.1, 0.88];
+const a8  = [-0.88, -1.1, -0.88];
+const board   = [0.0, -1.2, 0.0];
 const pawnScale = 0.24;
 const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
 var pointer = null;
 var objects = [];
+var cameraBase = [0, 0.2, 2];
+var cameraZ = 0;
+var pieces = [];
 
 var camera = {
   position: [0, 0, 5],
@@ -230,109 +284,157 @@ var camera = {
   fov: 60 * Math.PI / 180,
 };
 
-function getCoords(pos)	{
-	return [a1[0] + pos[0]/7*(h1[0]-a1[0]), a1[1], a1[2] + pos[1]/7*(a8[2]-a1[2])]; 
-}
-
-function getCookie(cName) {
-	const name = cName + "=";
-	const cDecoded = decodeURIComponent(document.cookie); //to be careful
-	const cArr = cDecoded .split('; ');
-	let res;
-	cArr.forEach(val => {
-	if (val.indexOf(name) === 0) res = val.substring(name.length);
-	})
-		return res;
-}
-
-function toggleView(color)	{
-  if (color == whiteView ? "b" : "w") {
-		camera.position[0] = board[0] - camera.position[0];
-		camera.position[1] = board[1] - camera.position[1];
+function toggleView(color) {
+  if (color == "w") {
+    cameraZ = 0;
+    whiteView = true;
   }
-	if (color == "w")	{
-		whiteView = true;
-	}
-	else if (color == "b")	{
-		whiteView = false;
-	}
+  else if (color == "b") {
+    cameraZ = Math.PI;
+    whiteView = false;
+  }
+}
+
+function toggleSceneAngle(num) {
+  cameraBase = [0, 0.2, 2 * num];
 }
 
 document.addEventListener("keydown", function(event) {
-	console.log(event.keyCode);
-	let pointer = objects[1];
-	switch(event.keyCode)	{
-	// case 37:
-	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]);}
-	// 	else	{assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]);} return;
-	// case 38:
-	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0], pointer.field[1] +1]);}
-	// 	else	{assignpos(pointer, [pointer.field[0], pointer.field[1] -1])}	return;
-	// case 39:
-	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0] +1, pointer.field[1]]); }
-	// 	else	{assignpos(pointer, [pointer.field[0] -1, pointer.field[1]]);} return;
-	// case 40:
-	// 	if (getCookie("session_color") == "white")	{assignpos(pointer, [pointer.field[0], pointer.field[1] -1]);}
-	// 	else	{assignpos(pointer, [pointer.field[0], pointer.field[1] +1])}	return;
-	// case 32:
-	// 	touchFigure(); return;
-	// case 13:
-	// 	if (getCookie("session_turn") == getCookie("session_color")) {submitTurn();} else {alert("Du bist nicht an der Reihe");} console.log(getCookie("session_turn") + getCookie("session_color")); return;
-	case 86:
-		if (whiteView)	{toggleView("b");} else {toggleView("w")}; return;
-	// case 65:
-	// 	sceneRotation += 0.01; return;
-	// case 68:
-	// 	sceneRotation += -0.01; return;
-	// case 87:
-	// 	toggleSceneAngle(2); return;
-	// case 83:
-	// 	toggleSceneAngle(1); return;
-	// case 85:
-	// 	getUpdate(); return;
-	// case 72:
-	// 	if (document.getElementById("hints").style.display == "none")	{document.getElementById("hints").style.display = "block";} else {document.getElementById("hints").style.display = "none";} return;
-	// case 27:
-	// 	leave(); return;
-	default:
-		console.log("No matching keyCode event");
-	}
+  console.log(event.keyCode);
+  switch(event.keyCode) {
+  case 37:
+    if (getCookie("session_color") == "white") {assignpos(pointer, pointer.i-1, pointer.j);}
+    else {assignpos(pointer, pointer.i+1, pointer.j);} return;
+  case 38:
+    if (getCookie("session_color") == "white") {assignpos(pointer, pointer.i, pointer.j+1);}
+    else {assignpos(pointer, pointer.i, pointer.j-1)}  return;
+  case 39:
+    if (getCookie("session_color") == "white") {assignpos(pointer, pointer.i+1, pointer.j); }
+    else {assignpos(pointer, pointer.i-1, pointer.j);} return;
+  case 40:
+    if (getCookie("session_color") == "white") {assignpos(pointer, pointer.i, pointer.j-1);}
+    else {assignpos(pointer, pointer.i, pointer.j+1)}  return;
+  case 32:
+    touchFigure(); return;
+  case 13:
+    if (getCookie("session_turn") == getCookie("session_color")) {submitTurn();} else {alert("Du bist nicht an der Reihe");} console.log(getCookie("session_turn") + getCookie("session_color")); return;
+  case 86:
+    if (whiteView) {toggleView("b");} else {toggleView("w")}; return;
+  case 65:
+    cameraZ += 0.01; return;
+  case 68:
+    cameraZ += -0.01; return;
+  case 87:
+    toggleSceneAngle(2); return;
+  case 83:
+    toggleSceneAngle(1); return;
+  case 85:
+    getUpdate(); return;
+  case 72:
+    if (document.getElementById("hints").style.display == "none") {document.getElementById("hints").style.display = "block";} else {document.getElementById("hints").style.display = "none";} return;
+  case 27:
+    leave(); return;
+  default:
+    console.log("No matching keyCode event");
+  }
 });
 
+function getField(i) {  return [i%8, Math.floor(i/8)]; }
+function getIndex(arr) { return arr[0] + arr[1]*8; }
+
+function touchFigure() {
+  if (activeField !== null) {
+    if (activeField[0] == objects[1].field[0] && activeField[1] == objects[1].field[1]) {
+      activeField = null;
+    }
+    else {
+  
+      if (field[getIndex(objects[1].field)] !== 0) {
+        console.log(field[getIndex(objects[1].field)]);
+        let farbe = "Schwarz";
+        if (figures[field[getIndex(objects[1].field)]].color == "w") {
+          farbe = "Weiß";
+        }
+        if (confirm("Soll die Figur (" + figures[field[getIndex(objects[1].field)]].name + ") der Farbe " + farbe + " wirklich geschlagen werden?")) {
+          field[getIndex(objects[1].field)] = field[getIndex(activeField)];
+          field[getIndex(activeField)] = 0;
+          activeField = null;
+          submitTurn();
+        }
+      }
+      else {
+        field[getIndex(objects[1].field)] = field[getIndex(activeField)];
+               field[getIndex(activeField)] = 0;
+        activeField = null;
+      }
+    }
+    console.log(field);
+    return;
+  }
+  if (field[getIndex(objects[1].field)] !== 0) {
+    activeField = objects[1].field;
+    hoverIntensity = 0;
+  }
+  console.log(field);
+}
+
+function say(text, color) {
+  console.log(text);
+
+  let t = document.getElementById("text");
+  if (color == "w") { t.style.color = "WHITE";} 
+  else if(color == "b") {t.style.color = "BLACK";}
+  else if(color !== undefined) {t.style.color = color;}
+  else {t.style.color = "BLACK";}
+  t.textContent = text;
+}
+
+function clamp(x, min, max) { return x < min ? min : x > max ? max : x; }
+
+function assignpos(obj, i, j) {
+  obj.i = clamp(i, 0, 7);
+  obj.j = clamp(j, 0, 7);
+  refreshTranslation(obj);
+}
+
+function refreshTranslation(obj) {
+  obj.obj.translation = getCoords(obj.i, obj.j);
+}
+
 function update(time) {
-  pointer.rotation.z = time;
-  camera.position = m4.transformPoint(m4.yRotation(time), [0, .2, 2]);
+  pointer.obj.rotation.z = time;
+  camera.position = m4.transformPoint(m4.yRotation(time), cameraBase);
 }
 
 async function main() {
-	if (typeof whiteView === 'undefined')	{
-		alert("Bitte die Lobby verwenden um einem Spiel beizutreten");
-		window.location.replace("lobby.php");
-	}
+  if (typeof whiteView === 'undefined') {
+    alert("Bitte die Lobby verwenden um einem Spiel beizutreten");
+    window.location.replace("lobby.php");
+  }
 
-	document.getElementById("text").textContent = "Warte auf 2. Spieler...";
+  document.getElementById("text").textContent = "Warte auf 2. Spieler...";
 
-	while (true) {
-		if (full) {
-			break;
-		}
-		playerJoined();
-		await sleep(1000);
-	}
+  while (true) {
+    if (full) {
+      break;
+    }
+    playerJoined();
+    await sleep(1000);
+  }
 
-	if (whiteView) {
-		toggleView("w");
-	}
-	else {
-		toggleView("b");
-	}
+  if (whiteView) {
+    toggleView("w");
+  }
+  else {
+    toggleView("b");
+  }
 
-	if (getCookie("session_turn") !== getCookie("session_color")) {
-		updateLoop();
-	}
+  if (getCookie("session_turn") !== getCookie("session_color")) {
+    updateLoop();
+  }
 
-	field = textToArr(getCookie("session_field"));
-	console.log(field);
+  field = textToArr(getCookie("session_field"));
+  console.log(field);
 
   // Get A WebGL context
   /** @type {HTMLCanvasElement} */
@@ -359,6 +461,8 @@ async function main() {
     board: toWebGL(gl, programInfo, await fetchOBJ('cube.obj')),
     pointer: toWebGL(gl, programInfo, await fetchOBJ('pointer.obj')),
   }
+
+  document.getElementById("text").textContent = "Warte auf 2. Spieler...";
 
   var figuresByNumber = [models.pawn, models.tower, models.bishop, models.horse, models.king, models.queen];
 
@@ -397,8 +501,9 @@ async function main() {
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], "board"));
 
-  pointer = makeObject(models.pointer, getCoords([4, 4]), [0, 0, 0], [.1, .1, .1], "board");
-  objects.push(pointer);
+  const pointerObj = makeObject(models.pointer, getCoords([4, 4]), [0, 0, 0], [.1, .1, .1], "board");
+  objects.push(pointerObj);
+  pointer = { obj: pointerObj, i: 4, j: 4 };
 
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
@@ -409,7 +514,9 @@ async function main() {
       const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
       const material = isBlack ? "black" : "white";
-      objects.push(makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material));
+      const obj = makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material);
+      objects.push(obj);
+      pieces.push({ obj, isBlack, i, j, });
     }
   }
 
