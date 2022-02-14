@@ -263,13 +263,16 @@ const board   = [0.0, -1.2, 0.0];
 const pawnScale = 0.24;
 const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
+const initialPointerField = [4, 4];
+const figureNames = ["Bauer", "Turm", "Pferd", "Läufer", "König", "Dame"];
 var pointer = null;
 var objects = [];
 var cameraBase = [0, 0.2, 2];
 var cameraZ = 0;
 var cameraMomentum = 0;
-var pieces = [];
-var activeField = [4, 4];
+var figures = [];
+var activeField = null;
+var hoverIntensity = 0;
 
 var camera = {
   position: [0, 0, 5],
@@ -338,26 +341,26 @@ function getIndex(arr) { return arr[0] + arr[1]*8; }
 
 function touchFigure() {
   if (activeField !== null) {
-    if (activeField[0] == objects[1].field[0] && activeField[1] == objects[1].field[1]) {
+    if (activeField[0] == pointer.i && activeField[1] == pointer.j) {
       activeField = null;
     }
     else {
   
-      if (field[getIndex(objects[1].field)] !== 0) {
-        console.log(field[getIndex(objects[1].field)]);
+      if (field[getIndex([pointer.i, pointer.j])] !== 0) {
+        console.log(field[getIndex([pointer.i, pointer.j])]);
         let farbe = "Schwarz";
-        if (figures[field[getIndex(objects[1].field)]].color == "w") {
+        if (field[getIndex([pointer.i, pointer.j])] <= 6) {
           farbe = "Weiß";
         }
-        if (confirm("Soll die Figur (" + figures[field[getIndex(objects[1].field)]].name + ") der Farbe " + farbe + " wirklich geschlagen werden?")) {
-          field[getIndex(objects[1].field)] = field[getIndex(activeField)];
+        if (confirm("Soll die Figur (" + figureNames[(field[getIndex([pointer.i, pointer.j])]-1) % 6] + ") der Farbe " + farbe + " wirklich geschlagen werden?")) {
+          field[getIndex([pointer.i, pointer.j])] = field[getIndex(activeField)];
           field[getIndex(activeField)] = 0;
           activeField = null;
           submitTurn();
         }
       }
       else {
-        field[getIndex(objects[1].field)] = field[getIndex(activeField)];
+        field[getIndex([pointer.i, pointer.j])] = field[getIndex(activeField)];
                field[getIndex(activeField)] = 0;
         activeField = null;
       }
@@ -365,8 +368,8 @@ function touchFigure() {
     console.log(field);
     return;
   }
-  if (field[getIndex(objects[1].field)] !== 0) {
-    activeField = objects[1].field;
+  if (field[getIndex([pointer.i, pointer.j])] !== 0) {
+    activeField = [pointer.i, pointer.j];
     hoverIntensity = 0;
   }
   console.log(field);
@@ -489,9 +492,9 @@ async function main() {
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], "board"));
 
-  const pointerObj = makeObject(models.pointer, getCoords(activeField), [0, 0, 0], [.1, .1, .1], "board");
+  const pointerObj = makeObject(models.pointer, getCoords(initialPointerField), [0, 0, 0], [.1, .1, .1], "board");
   objects.push(pointerObj);
-  pointer = { obj: pointerObj, i: activeField[0], j: activeField[1] };
+  pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
 
   for (let i = 0; i < 0; i++) {
     for (let j = 0; j < 0; j++) {
@@ -504,7 +507,7 @@ async function main() {
       const material = isBlack ? "black" : "white";
       const obj = makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material);
       objects.push(obj);
-      pieces.push({ obj, isBlack, i, j, });
+      //pieces.push({ obj, isBlack, i, j, });
     }
   }
 	var figures = [];
