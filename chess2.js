@@ -124,6 +124,9 @@ void main() {
 }
 `;
 
+function sleep(ms)	{
+return new Promise(resolve => setTimeout(resolve, ms));  
+}
 async function fetchOBJ(url) {
   say(url + " wird geladen...", null);
   const response = await fetch(url);

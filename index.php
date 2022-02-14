@@ -39,7 +39,7 @@ function destroySession()	{
 	req.withCredentials = true;
 
 	req.send();
-	console.log("UNLOAD-----------------UNLOAD--------------------UNLOAD------EVENT FIRED: SESION DESTROYES");
+	console.log("UNLOAD-----------------UNLOAD--------------------UNLOAD------EVENT FIRED: SESION DESTROYED");
 }
 function createSession()        {
 	if (isNL())	{
