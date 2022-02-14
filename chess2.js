@@ -613,12 +613,12 @@ async function main() {
 
 	  for(let i = 0; i < field.length; i++)	{
 		  if (field[i] == 0)	{
-			  return;
+			  continue;
 		  }
 		  let object = figures[field[i] -1];
 
 		  object.uniforms.u_instanceWorld = computeMatrix(
-			  object.translation,
+			  getCoords(getField(i)),
 			  object.rotation,
 			  object.scale);
 		  object.uniforms.u_texture = textures[object.material];
