@@ -5,6 +5,26 @@ var field = "";
 function isNL()	{
 	return window.location.href.includes("nl");
 }
+function say(text, color) {
+	console.log(text);
+
+	let t = document.getElementById("text");
+	if (color == "w") { t.style.color = "WHITE";}
+	else if(color == "b") {t.style.color = "BLACK";}
+	else if(color !== undefined) {t.style.color = color;}
+	else {t.style.color = "BLACK";}
+	t.textContent = text;
+}
+function getCookie(cName) {
+	const name = cName + "=";
+	const cDecoded = decodeURIComponent(document.cookie); //to be careful
+	const cArr = cDecoded .split('; ');
+	let res;
+	cArr.forEach(val => {
+	if (val.indexOf(name) === 0) res = val.substring(name.length);
+	})
+	return res;
+}
 function textToArr(text)        {
 	console.log(text);
 	let arr = text.split(",").map( Number );

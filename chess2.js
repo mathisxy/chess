@@ -252,17 +252,6 @@ function getCoords(pos) {
   return [a1[0] + pos[0]/7*(h1[0]-a1[0]), a1[1], a1[2] + pos[1]/7*(a8[2]-a1[2])]; 
 }
 
-function getCookie(cName) {
-  const name = cName + "=";
-  const cDecoded = decodeURIComponent(document.cookie); //to be careful
-  const cArr = cDecoded .split('; ');
-  let res;
-  cArr.forEach(val => {
-  if (val.indexOf(name) === 0) res = val.substring(name.length);
-  })
-    return res;
-}
-
 // --------------------------------------
 //               Globals
 // --------------------------------------
@@ -381,17 +370,6 @@ function touchFigure() {
     hoverIntensity = 0;
   }
   console.log(field);
-}
-
-function say(text, color) {
-  console.log(text);
-
-  let t = document.getElementById("text");
-  if (color == "w") { t.style.color = "WHITE";} 
-  else if(color == "b") {t.style.color = "BLACK";}
-  else if(color !== undefined) {t.style.color = color;}
-  else {t.style.color = "BLACK";}
-  t.textContent = text;
 }
 
 function clamp(x, min, max) { return x < min ? min : x > max ? max : x; }
@@ -515,8 +493,8 @@ async function main() {
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: activeField[0], j: activeField[1] };
 
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
+  for (let i = 0; i < 0; i++) {
+    for (let j = 0; j < 0; j++) {
       const figure = field[getIndex([i, j])] - 1;
       if (figure < 0) continue;
       const isBlack = figure >= 6;
@@ -529,6 +507,18 @@ async function main() {
       pieces.push({ obj, isBlack, i, j, });
     }
   }
+	var figures = [];
+	for (let i = 0; i < 12; i++)	{
+		const isBlack = i >= 6;
+		const shape = figuresByNumber[i % 6];
+		const rotation = i % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
+		const scale = pawnScale;
+		const material = isBlack ? "black" : "white";
+		const obj = makeObject(shape, getCoords([-1, -1]), [0, rotation, 0], [scale, scale, scale], material);
+		figures.push(obj);
+	}
+	console.log(figures);
+	console.log(field);
 
   function computeMatrix(translation, rotation, scale) {
     var matrix = m4.translation(translation[0], translation[1], translation[2]);
@@ -578,6 +568,7 @@ async function main() {
       object.uniforms.u_texture = textures[object.material];
     });
 
+
     const sharedUniforms = {
       u_viewProjection: m4.multiply(projectionMatrix, viewMatrix),
       u_viewInverse: cameraMatrix,
@@ -619,6 +610,37 @@ async function main() {
       // Draw
       twgl.drawBufferInfo(gl, object.bufferInfo);
     });
+
+	  for(let i = 0; i < field.length; i++)	{
+		  if (field[i] == 0)	{
+			  return;
+		  }
+		  let object = figures[field[i] -1];
+
+		  object.uniforms.u_instanceWorld = computeMatrix(
+			  object.translation,
+			  object.rotation,
+			  object.scale);
+		  object.uniforms.u_texture = textures[object.material];
+
+		  var programInfo = object.programInfo;
+		  var vertexArray = object.vertexArray;
+
+		   if (programInfo !== lastUsedProgramInfo) {
+			   lastUsedProgramInfo = programInfo;
+			   gl.useProgram(programInfo.program);
+			   twgl.setUniforms(programInfo, sharedUniforms);
+		   }
+
+		  if (lastUsedVertexArray !== vertexArray) {
+			  lastUsedVertexArray = vertexArray;
+			  gl.bindVertexArray(vertexArray);
+		  }
+
+		  twgl.setUniforms(programInfo, object.uniforms);
+		  twgl.drawBufferInfo(gl, object.bufferInfo);
+	  }
+
 
     requestAnimationFrame(drawScene);
   }
