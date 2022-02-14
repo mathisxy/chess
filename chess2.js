@@ -275,7 +275,9 @@ var pointer = null;
 var objects = [];
 var cameraBase = [0, 0.2, 2];
 var cameraZ = 0;
+var cameraMomentum = 0;
 var pieces = [];
+var activeField = [4, 4];
 
 var camera = {
   position: [0, 0, 5],
@@ -296,7 +298,7 @@ function toggleView(color) {
 }
 
 function toggleSceneAngle(num) {
-  cameraBase = [0, 0.2, 2 * num];
+  cameraBase = [0, -1 + 0.8 * num, 2];
 }
 
 document.addEventListener("keydown", function(event) {
@@ -321,9 +323,9 @@ document.addEventListener("keydown", function(event) {
   case 86:
     if (whiteView) {toggleView("b");} else {toggleView("w")}; return;
   case 65:
-    cameraZ += 0.01; return;
+    cameraMomentum += -0.01; return;
   case 68:
-    cameraZ += -0.01; return;
+    cameraMomentum += 0.01; return;
   case 87:
     toggleSceneAngle(2); return;
   case 83:
@@ -401,9 +403,12 @@ function refreshTranslation(obj) {
   obj.obj.translation = getCoords(obj.i, obj.j);
 }
 
-function update(time) {
-  pointer.obj.rotation.z = time;
-  camera.position = m4.transformPoint(m4.yRotation(time), cameraBase);
+function update(time, deltaTime) {
+  pointer.obj.rotation[1] -= deltaTime * 0.0005;
+  cameraZ += cameraMomentum * deltaTime * 0.05;
+  cameraMomentum = clamp(cameraMomentum * Math.pow(0.999, deltaTime), -.01, .01);
+
+  camera.position = m4.transformPoint(m4.yRotation(cameraZ), cameraBase);
 }
 
 async function main() {
@@ -421,6 +426,8 @@ async function main() {
     playerJoined();
     await sleep(1000);
   }
+
+  toggleSceneAngle(1);
 
   if (whiteView) {
     toggleView("w");
@@ -501,13 +508,13 @@ async function main() {
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], "board"));
 
-  const pointerObj = makeObject(models.pointer, getCoords([4, 4]), [0, 0, 0], [.1, .1, .1], "board");
+  const pointerObj = makeObject(models.pointer, getCoords(activeField), [0, 0, 0], [.1, .1, .1], "board");
   objects.push(pointerObj);
-  pointer = { obj: pointerObj, i: 4, j: 4 };
+  pointer = { obj: pointerObj, i: activeField[0], j: activeField[1] };
 
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
-      const figure = field[i*8+ j] - 1;
+      const figure = field[getIndex([i, j])] - 1;
       if (figure < 0) continue;
       const isBlack = figure >= 6;
       const shape = figuresByNumber[figure % 6];
@@ -533,10 +540,12 @@ async function main() {
 
   requestAnimationFrame(drawScene);
 
+  var lastTime = 0;
+
   // Draw the scene.
   function drawScene(time) {
-    time = time * 0.0005;
-    update(time);
+    update(time, time - lastTime);
+    lastTime = time;
 
     twgl.resizeCanvasToDisplaySize(gl.canvas);
 
@@ -549,7 +558,7 @@ async function main() {
     // Compute the projection matrix
     var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     var projectionMatrix =
-        m4.perspective(camera.fov, aspect, 1, 2000);
+        m4.perspective(camera.fov, aspect, 0.1, 2000);
 
     // Compute the camera's matrix using look at.
     var cameraMatrix = m4.lookAt(camera.position, camera.target, camera.up);
