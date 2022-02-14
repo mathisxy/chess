@@ -32,7 +32,7 @@ void main() {
   
   vec4 worldPosition = u_instanceWorld * a_position;
   v_position = u_viewProjection * worldPosition;
-  v_normal = (u_instanceWorld * vec4(a_normal, 0)).xyz;
+  v_normal = mat3(u_instanceWorld) * a_normal;
   v_surfaceToLight = u_lightWorldPos - worldPosition.xyz;
   v_surfaceToView = u_viewInverse[3].xyz - worldPosition.xyz;
   gl_Position = v_position;
@@ -50,6 +50,7 @@ in vec3 v_surfaceToLight;
 in vec3 v_surfaceToView;
 
 uniform sampler2D u_texture;
+uniform samplerCube u_skybox;
 
 uniform vec4 u_lightColor;
 uniform vec4 u_ambient;
@@ -71,14 +72,24 @@ void main() {
   vec3 a_normal = normalize(v_normal);
   vec3 surfaceToLight = normalize(v_surfaceToLight);
   vec3 surfaceToView = normalize(v_surfaceToView);
+
   vec3 halfVector = normalize(surfaceToLight + surfaceToView);
+
   vec4 litR = lit(dot(a_normal, surfaceToLight),
                     dot(a_normal, halfVector), u_shininess);
-  vec4 finalColor = vec4((
-  u_lightColor * (diffuseColor * litR.y + diffuseColor * u_ambient +
-                u_specular * litR.z * u_specularFactor)).rgb,
+
+  vec4 finalColor = vec4(
+      (u_lightColor
+        * (diffuseColor * litR.y
+          + diffuseColor * u_ambient
+          + u_specular * litR.z * u_specularFactor)
+      ).rgb,
       diffuseColor.a);
-  outColor = finalColor;
+
+  vec3 reflectDir = reflect(surfaceToView, v_normal);
+
+  // outColor = finalColor;
+  outColor = texture(u_skybox, reflectDir);
 }
 `;
 
@@ -371,6 +382,17 @@ async function main() {
     white: {src: [255, 255, 255, 255]},
     black: {src: [50, 50, 50, 255]},
     board: {src: "chessBoard.jpg"},
+    skybox: {
+      target: gl.TEXTURE_CUBE_MAP,
+      src: [
+        'stolenCubemap/pos-x.jpg',
+        'stolenCubemap/neg-x.jpg',
+        'stolenCubemap/pos-y.jpg',
+        'stolenCubemap/neg-y.jpg',
+        'stolenCubemap/pos-z.jpg',
+        'stolenCubemap/neg-z.jpg',
+      ],
+    }
   });
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], "board"));
@@ -441,6 +463,7 @@ async function main() {
       u_viewProjection: m4.multiply(projectionMatrix, viewMatrix),
       u_viewInverse: cameraMatrix,
 
+      u_skybox: textures.skybox,
       u_lightWorldPos: [1, 8, -30],
       u_lightColor: [1, 1, 1, 1],
       u_ambient: [0, 0, 0, 1],
