@@ -301,13 +301,13 @@ document.addEventListener("keydown", function(event) {
     else {assignpos(pointer, pointer.i+1, pointer.j);} return;
   case 38:
     if (getCookie("session_color") == "white") {assignpos(pointer, pointer.i, pointer.j+1);}
-    else {assignpos(pointer, pointer.i, pointer.j-1)}  return;
+    else {assignpos(pointer, pointer.i, pointer.j-1);}  return;
   case 39:
     if (getCookie("session_color") == "white") {assignpos(pointer, pointer.i+1, pointer.j); }
     else {assignpos(pointer, pointer.i-1, pointer.j);} return;
   case 40:
     if (getCookie("session_color") == "white") {assignpos(pointer, pointer.i, pointer.j-1);}
-    else {assignpos(pointer, pointer.i, pointer.j+1)}  return;
+    else {assignpos(pointer, pointer.i, pointer.j+1);}  return;
   case 32:
     touchFigure(); return;
   case 13:
@@ -381,7 +381,7 @@ function assignpos(obj, i, j) {
 }
 
 function refreshTranslation(obj) {
-  obj.obj.translation = getCoords(obj.i, obj.j);
+  obj.obj.translation = getCoords([obj.i, obj.j]);
 }
 
 function update(time, deltaTime) {
