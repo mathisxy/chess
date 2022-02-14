@@ -424,6 +424,9 @@ async function main() {
     updateLoop();
   }
 
+	say("Weiß beginnt", "w");
+	await sleep(1);
+
   field = textToArr(getCookie("session_field"));
   console.log(field);
 
@@ -480,12 +483,12 @@ async function main() {
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
       src: [
-        'stolenCubemap/pos-x.jpg',
-        'stolenCubemap/neg-x.jpg',
-        'stolenCubemap/pos-y.jpg',
-        'stolenCubemap/neg-y.jpg',
-        'stolenCubemap/pos-z.jpg',
-        'stolenCubemap/neg-z.jpg',
+        'skybox2.png',
+        'skybox4.png',
+        'skybox3.png',
+        'skybox5.png',
+        'skybox1.png',
+        'skybox6.png',
       ],
     }
   });
@@ -496,20 +499,6 @@ async function main() {
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
 
-  for (let i = 0; i < 0; i++) {
-    for (let j = 0; j < 0; j++) {
-      const figure = field[getIndex([i, j])] - 1;
-      if (figure < 0) continue;
-      const isBlack = figure >= 6;
-      const shape = figuresByNumber[figure % 6];
-      const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
-      const scale = pawnScale;
-      const material = isBlack ? "black" : "white";
-      const obj = makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material);
-      objects.push(obj);
-      //pieces.push({ obj, isBlack, i, j, });
-    }
-  }
 	var figures = [];
 	for (let i = 0; i < 12; i++)	{
 		const isBlack = i >= 6;
