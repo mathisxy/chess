@@ -98,17 +98,17 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 
 void main() {
   vec4 diffuseColor = texture(u_texture, v_texcoord);
-  vec3 a_normal = normalize(v_normal);
+  vec3 normal = normalize(v_normal);
   vec3 surfaceToLight = normalize(v_surfaceToLight);
   vec3 surfaceToView = normalize(v_surfaceToView);
 
   vec3 halfVector = normalize(surfaceToLight + surfaceToView);
 
-  vec3 reflectDir = reflect(surfaceToView, v_normal);
+  vec3 reflectDir = reflect(surfaceToView * -1.0, normal);
   vec4 reflectColor = texture(u_skybox, reflectDir);
 
-  vec4 litR = lit(dot(a_normal, surfaceToLight),
-                    dot(a_normal, halfVector), u_shininess);
+  vec4 litR = lit(dot(normal, surfaceToLight),
+                    dot(normal, halfVector), u_shininess);
 
   vec4 finalColor = vec4(
       (u_lightColor
@@ -118,7 +118,8 @@ void main() {
       ).rgb,
       diffuseColor.a);
 
-  outColor = finalColor;
+  //outColor = finalColor;
+	outColor = 0.2 * reflectColor + 0.8 * diffuseColor;
   // outColor = vec4(v_texcoord.x * 1.0, v_texcoord.y * 1.0, 1, 1);
   // outColor = texture(u_skybox, normalize(vec3(a_position)));
 }
@@ -495,16 +496,6 @@ async function main() {
     window.location.replace("lobby.php");
   }
 
-  document.getElementById("text").textContent = "Warte auf 2. Spieler...";
-
-  while (true) {
-    if (full) {
-      break;
-    }
-    playerJoined();
-    await sleep(1000);
-  }
-
   toggleSceneAngle(1);
 
   if (whiteView) {
@@ -576,6 +567,14 @@ async function main() {
   const quadBufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
   const quadVAO = twgl.createVAOFromBufferInfo(gl, skyboxProgramInfo, quadBufferInfo);
 
+	say("Warten auf anderen Spieler...", getCookie("session_color"));
+	while (true) {
+		if (full) {
+			break;
+		}
+		playerJoined();
+		await sleep(1000);
+	}
 	say("Weiß beginnt", "white");
         await sleep(1);
 

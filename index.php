@@ -2,6 +2,7 @@
 <script>
 var full = false;
 var field = "";
+var whiteView;
 function isNL()	{
 	return window.location.href.includes("nl");
 }
@@ -65,12 +66,20 @@ function createSession()        {
 	if (isNL())	{
 		return;
 	}
+	document.cookie = "session_name=" + session_name;
+	document.cookie = "session_color=" + session_color;
+	document.cookie = "session_turn=" + session_turn;
+	console.log(document.cookie);
         let req = new XMLHttpRequest;
 
         req.open('GET', 'server.php?op=createSession', false);
 
 	        req.onload = function() {
 			console.log("CREATE SESSION: " + req.response);
+			if (!req.response.includes("Erfolg"))	{
+				alert("Die Sitzung konnte leider aufgrund eines Fehlers nicht erstellt werden");
+				//window.location.href = "lobby.php";
+			}
 		}
 	req.withCredentials = true;
        
@@ -80,13 +89,21 @@ function joinSession()		{
 	if (isNL())	{
 		return;
 	}
+
+	document.cookie = "session_id=" + session_id;
+	document.cookie = "session_name=" + session_name;
+	console.log(document.cookie);
 	let req = new XMLHttpRequest;
 
-	req.open('GET', 'server.php?op=joinSession', true);
+	req.open('GET', 'server.php?op=joinSession', false);
 
 	req.onload = function() {
-		say(req.response, getCookie("session_color"));
-		console.log(req.response);
+		console.log("JOIN SESSION: " + req.response);
+		if (!req.response.includes("Erfolg"))	{
+			alert(req.response);
+			window.location.href = "lobby.php";
+		}
+		getCookie("session_color") == "white" ? whiteView = true : whiteView = false;
 	}
                 req.withCredentials = true;
                 req.send();
@@ -100,7 +117,6 @@ function playerJoined()		{
 	        req.open('GET', 'server.php?op=playerJoined', false);
 
         req.onload = function() {
-		console.log(req.response);
 		if (!req.response.includes("false"))	{
 			getCookie("session_color") == "white" ? say(req.response, "black") : say(req.response, "white");
 			full = true;		
@@ -111,6 +127,10 @@ function playerJoined()		{
 }
 function submitTurn()	{
 	if (isNL())	{
+		return;
+	}
+	if (getCookie("session_color") !== getCookie("session_turn"))	{
+		alert("Du bist nicht an der Reihe");
 		return;
 	}
 
@@ -163,7 +183,6 @@ function getUpdate()	{
         req.withCredentials = true;
         req.send();
 }
-// main();
 </script>
 <?php
 if (isset($_GET['nl']))	{
@@ -187,18 +206,15 @@ include("dbConnect.php");
 if (isset($_GET['createSession']))      {
 
 
-        $id = uniqid(rand());
+       
         $sessionName = $_GET['session_name'];
 	$playerColor = $_GET['color'];
 	$turn = "white";
-
-
-	setcookie("session_id", $id, time() + 36000);
-	setcookie("session_name", $sessionName, time() + 36000);
-	setcookie("session_color", $playerColor, time() + 36000);
-	setcookie("session_turn", $turn, time() + 36000);
       
-        echo "<script>";
+	echo "<script>";
+	echo "var session_name = '$sessionName';\n";
+	echo "var session_color = '$playerColor';\n";
+	echo "var session_turn = '$turn';\n";
 	echo "createSession();\n";
 	if ($playerColor == "white")	{
 		echo "var whiteView = true;\n";
@@ -215,7 +231,7 @@ else if (isset($_GET['joinSession']))	{
 
 	$query = "SELECT * FROM sessions WHERE id='$session_id'";
 
-	include("dbQuery.php");
+	require("dbQuery.php");
 
 	if($results == false)	{
 		echo "<script>alert('Die ausgewählte Sitzung ist leider nicht mehr verfügbar');</script>";
@@ -224,23 +240,10 @@ else if (isset($_GET['joinSession']))	{
 	
 	$results = $results[0];
 
-	setcookie("session_id", $results['id'], time() +36000);
-	setcookie("session_name", $results['name'], time() +36000);
-	
-	if (!isset($results['player1']))	{
-		setcookie("session_color", "white");
-		setcookie("session_turn", "white");
-		echo "<script>var whiteView = true; var color = 'white';</script>";
-	}
-	else if (!isset($results['player2']))	{
-		setcookie("session_color", "black");
-		setcookie("session_turn", "white");
-		echo "<script>var whiteView = false; var color = 'black';</script>";
-	}
-	else	{
-		echo "<script>alert('Die Sitzung ist leider schon voll');</script>";
-		exit;
-	}
+	echo "<script>";
+	echo "var session_id = '$session_id';\n";
+	echo "var session_name = '" . $results['name'] . "';\n";
+	echo "</script>";
 
 	echo "<script>joinSession();</script>";
 
@@ -302,6 +305,6 @@ text-align: center;
 <!-- <script src="twgl.primitives.createCubeVertices"></script> -->
 
 <script src="chess2.js"></script>
-
+</script>main()</script>
 </body>
 </html>

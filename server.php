@@ -8,11 +8,12 @@ if (isset($_GET['op']))	{
 		listSessionsForLobby();
 		exit;
 	}
+	if ($_GET['op'] == 'createSession')	{
+		createSession();
+		exit;
+	}
 	if (isset($_COOKIE['session_id']))	{
 		switch($_GET['op'])	{
-		case 'createSession':
-			createSession();
-			break;
 		case 'joinSession':
 			joinSession();
 			break;
@@ -49,7 +50,8 @@ else {
 
 function createSession()	{
 
-	$session_id = $_COOKIE['session_id'];
+	$session_id = uniqid(rand());
+	setcookie("session_id", $session_id);
 	$session_name = $_COOKIE['session_name'];
 	$session_player = $_COOKIE['session_playerName'];
 	$session_turn = $_COOKIE['session_turn'];
@@ -73,16 +75,26 @@ function joinSession()	{
 	$session_id = $_COOKIE['session_id'];
 	$session_player = $_COOKIE['session_playerName'];
 	
-	$query = "";
+	$query = "SELECT * FROM sessions WHERE id='$session_id'";
 
-	if ($_COOKIE['session_color'] == "white")	{
-		$query = "UPDATE sessions SET player1='$session_player', turn='white' WHERE id='$session_id'";
+	require("dbQuery.php");
+	
+	if ($result == false)	{
+		echo "Error: Die Sitzung konnte nicht gefunden werden";
+		exit;
 	}
-	else if ($_COOKIE['session_color'] == "black")	{
-		$query = "UPDATE sessions SET player2='$session_player', turn='white' WHERE id='$session_id'";
+	if (!isset($results['player1']))        {
+		setcookie("session_color", "white");
+		setcookie("session_turn", "white");
+		 $query = "UPDATE sessions SET player1='$session_player', turn='white' WHERE id='$session_id'";
 	}
-	else	{
-		echo "Error: Die Spielerfarbe konnte nicht ausgelesen werden";
+	else if (!isset($results['player2']))   {
+		setcookie("session_color", "black");
+		setcookie("session_turn", "white");
+		 $query = "UPDATE sessions SET player2='$session_player', turn='white' WHERE id='$session_id'";
+	}
+	else    {
+		echo "Die Sitzung ist leider schon voll";
 		exit;
 	}
 
