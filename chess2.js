@@ -335,6 +335,11 @@ var camera = {
   up: [0, 1, 0],
   fov: 60 * Math.PI / 180,
 };
+var cubeProjection = {
+	fov: 60 * Math.PI / 180,
+	near: 2000,
+	far: 2001,
+}
 
 function toggleView(color) {
   if (color == "w") {
@@ -597,7 +602,7 @@ async function main() {
     var projectionMatrix =
         m4.perspective(camera.fov, aspect, 0.1, 2000);
 	  var cubeMapProjectionMatrix = 
-		  m4.perspective(camera.fov, aspect, 1.5, 2000);
+		  m4.perspective(cubeProjection.fov, aspect, cubeProjection.near, cubeProjection.far);
 
     // Compute the camera's matrix using look at.
     var cameraMatrix = m4.lookAt(camera.position, camera.target, camera.up);
