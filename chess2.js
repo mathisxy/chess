@@ -141,7 +141,7 @@ var skyboxFragmentShaderSource = `#version 300 es
 precision highp float;
 
 uniform samplerCube u_skybox2;
-uniform mat4 u_viewDirectionProjectionInverse;
+uniform mat4 u_viewProjectionInverse;
 
 in vec4 v_position;
 
@@ -149,9 +149,9 @@ in vec4 v_position;
 out vec4 outColor;
 
 void main() {
-  vec4 t = u_viewDirectionProjectionInverse * v_position;
-  outColor = t;
-  //outColor = texture(u_skybox2, normalize(t.xyz / t.w));
+  vec4 t = u_viewProjectionInverse * v_position;
+  //outColor = t;
+  outColor = texture(u_skybox2, normalize(t.xyz / t.w));
   //outColor = texture(u_skybox2, normalize(v_position.xyz/v_position.w));
   //outColor = texture(u_skybox2, normalize(vec3(v_position.x*2.0, v_position.y*2.0, 1)));
 }
@@ -552,12 +552,12 @@ async function main() {
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
       src: [
-        'cubemap/pos-x.jpg',
-        'cubemap/neg-x.jpg',
-        'cubemap/pos-y.jpg',
-        'cubemap/neg-y.jpg',
-        'cubemap/pos-z.jpg',
-        'cubemap/neg-z.jpg',
+        'px.jpg',
+        'nx.jpg',
+        'py.jpg',
+        'ny.jpg',
+        'pz.jpg',
+        'nz.jpg',
       ],
     }
   });
@@ -596,24 +596,31 @@ async function main() {
     var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     var projectionMatrix =
         m4.perspective(camera.fov, aspect, 0.1, 2000);
+	  var cubeMapProjectionMatrix = 
+		  m4.perspective(camera.fov, aspect, 1.5, 2000);
 
     // Compute the camera's matrix using look at.
     var cameraMatrix = m4.lookAt(camera.position, camera.target, camera.up);
+	  var cubeMapCameraMatrix = m4.lookAt(camera.position, camera.target, camera.up);
 
     // Make a view matrix from the camera matrix.
     var viewMatrix = m4.inverse(cameraMatrix);
+	  var cubeMapViewMatrix = m4.inverse(cameraMatrix);
 
-	  var viewDirectionProjectionMatrix =
+	  var viewProjectionMatrix =
 		  m4.multiply(projectionMatrix, viewMatrix);
-	  var viewDirectionProjectionInverseMatrix = 
-		  m4.inverse(viewDirectionProjectionMatrix);
+	  var cubeMapViewProjectionMatrix = 
+		  m4.multiply(cubeMapProjectionMatrix, cubeMapViewMatrix);
+
+	  var cubeMapViewProjectionInverseMatrix = 
+		  m4.inverse(cubeMapViewProjectionMatrix);
 
     // Compute the matrices for each object.
     objects.forEach(computeUniforms);
 
 
     const sharedUniforms = {
-      u_viewProjection: viewDirectionProjectionMatrix,
+      u_viewProjection: viewProjectionMatrix,
       u_viewInverse: cameraMatrix,
 
       u_skybox: textures.skybox,
@@ -663,10 +670,11 @@ async function main() {
     gl.depthFunc(gl.LEQUAL);
  
     gl.useProgram(skyboxProgramInfo.program);
-    twgl.setUniforms(programInfo, {
-      u_viewDirectionProjectionInverse: m4.identity(),
+    twgl.setUniforms(skyboxProgramInfo, {
+      u_viewProjectionInverse: cubeMapViewProjectionInverseMatrix,
       u_skybox2: textures.skybox, // TODO: Find out why I need a 2 as suffix to fix warning
     });
+
     gl.bindVertexArray(quadVAO);
     twgl.drawBufferInfo(gl, quadBufferInfo);
 
