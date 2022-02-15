@@ -135,9 +135,7 @@ out vec4 v_position;
 
 void main() {
   v_position = u_viewProjectionInverse * vec4(a_position.xy, 1, 1);
-  v_position = vec4(a_position.xy, 1, 1);
   gl_Position = vec4(a_position.xy, 1, 1);
-  gl_Position.z = 1.0;  //vec4(a_position.xy, 1, 1);
 }
 `;
 
@@ -145,7 +143,6 @@ var skyboxFragmentShaderSource = `#version 300 es
 precision highp float;
 
 uniform samplerCube u_skybox;
-uniform mat4 u_viewProjectionInverse;
 
 in vec4 v_position;
 
@@ -153,11 +150,7 @@ in vec4 v_position;
 out vec4 outColor;
 
 void main() {
-  vec4 t = u_viewProjectionInverse * v_position;
-  //outColor = t;
-  outColor = texture(u_skybox, normalize(t.xyz / t.w));
-  //outColor = texture(u_skybox, normalize(v_position.xyz/v_position.w));
-  // outColor = texture(u_skybox, normalize(v_position.xyz));
+  outColor = texture(u_skybox, normalize(v_position.xyz));
 }
 `;
 
@@ -341,11 +334,6 @@ var camera = {
   near: 0.1,
   far: 2000,
 };
-var cubeProjection = {
-  fov: 60 * Math.PI / 180,
-  near: 2000,
-  far: 2001,
-}
 
 function toggleView(color) {
   if (color == "w") {
@@ -615,12 +603,11 @@ async function main() {
 	  var viewProjectionMatrix =
 		  m4.multiply(projectionMatrix, viewMatrix);
 
-    var cubeMapViewProjectionInverseMatrix = 
+    var viewProjectionInverseMatrix = 
       m4.multiply(cameraMatrix, m4.inverse(projectionMatrix));
 
     // Compute the matrices for each object.
     objects.forEach(computeUniforms);
-
 
     const sharedUniforms = {
       u_viewProjection: viewProjectionMatrix,
@@ -674,7 +661,7 @@ async function main() {
  
     gl.useProgram(skyboxProgramInfo.program);
     twgl.setUniforms(skyboxProgramInfo, {
-      u_viewProjectionInverse: cubeMapViewProjectionInverseMatrix,
+      u_viewProjectionInverse: viewProjectionInverseMatrix,
       u_skybox: textures.skybox,
     });
 
