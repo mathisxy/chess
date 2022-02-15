@@ -510,9 +510,6 @@ async function main() {
     updateLoop();
   }
 
-	say("Weiß beginnt", "w");
-	await sleep(1);
-
   field = textToArr(getCookie("session_field"));
   console.log(field);
 
@@ -543,8 +540,6 @@ async function main() {
     pointer: toWebGL(gl, programInfo, await fetchOBJ('pointer.obj')),
   }
 
-  document.getElementById("text").textContent = "Warte auf 2. Spieler...";
-
   figuresByNumber = [models.pawn, models.tower, models.bishop, models.horse, models.king, models.queen];
 
   textures = twgl.createTextures(gl, {
@@ -572,6 +567,9 @@ async function main() {
 
   const quadBufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
   const quadVAO = twgl.createVAOFromBufferInfo(gl, skyboxProgramInfo, quadBufferInfo);
+
+	say("Weiß beginnt", "white");
+        await sleep(1);
 
   requestAnimationFrame(drawScene);
 

@@ -9,8 +9,8 @@ function say(text, color) {
 	console.log(text);
 
 	let t = document.getElementById("text");
-	if (color == "w") { t.style.color = "WHITE";}
-	else if(color == "b") {t.style.color = "BLACK";}
+	if (color == "white") { t.style.color = "WHITE";}
+	else if(color == "black") {t.style.color = "BLACK";}
 	else if(color !== undefined) {t.style.color = color;}
 	else {t.style.color = "BLACK";}
 	t.textContent = text;
@@ -102,7 +102,7 @@ function playerJoined()		{
         req.onload = function() {
 		console.log(req.response);
 		if (!req.response.includes("false"))	{
-			say(req.response, getCookie("session_color"));
+			getCookie("session_color") == "white" ? say(req.response, "black") : say(req.response, "white");
 			full = true;		
 		}
         } 
@@ -126,7 +126,7 @@ function submitTurn()	{
 		}
 		else	{
 			updateLoop();
-			say(req.response, getCookie("session_color"));
+			getCookie("session_color") == "white" ? say(req.response, "black") : say(req.response, "white");
 		}
         }
       	req.withCredentials = true;
