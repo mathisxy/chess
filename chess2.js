@@ -125,7 +125,7 @@ void main() {
 `;
 
 function sleep(ms)	{
-return new Promise(resolve => setTimeout(resolve, ms));  
+  return new Promise(resolve => setTimeout(resolve, ms));  
 }
 async function fetchOBJ(url) {
   say(url + " wird geladen...", null);
@@ -241,11 +241,29 @@ function parseOBJ(text) {
   function usemtl(parts) { return parts[0]; }
 }
 
-function toWebGL(gl, meshProgramInfo, objData) {
+function toWebGL(gl, programInfo, objData) {
   const bufferInfo = twgl.createBufferInfoFromArrays(gl, objData.arrays);
-  const vao = twgl.createVAOFromBufferInfo(gl, meshProgramInfo, bufferInfo);
+  const vao = twgl.createVAOFromBufferInfo(gl, programInfo, bufferInfo);
 
-  return { bufferInfo, vao, material: objData.material };
+  return {
+    programInfo: programInfo,
+    bufferInfo: bufferInfo,
+    vertexArray: vao,
+  };//{ bufferInfo, vao, material: objData.material };
+}
+
+function makeObject(shape, translation, rotation, scale, material) {
+  return {
+    info: shape,
+    isVisible: true,
+    uniforms: {
+      u_instanceWorld: m4.identity(),
+    },
+    translation: translation,
+    rotation: rotation, // TODO: Use quaternion instead of euler
+    scale: scale,
+    material: material,
+  };
 }
 
 function getCoords(pos) {
@@ -265,8 +283,11 @@ const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
 const initialPointerField = [4, 4];
 const figureNames = ["Bauer", "Turm", "Pferd", "Läufer", "König", "Dame"];
+
+var figuresByNumber = null;
 var pointer = null;
 var objects = [];
+var textures = [];
 var cameraBase = [0, 0.2, 2];
 var cameraZ = 0;
 var cameraMomentum = 0;
@@ -383,6 +404,23 @@ function assignpos(obj, i, j) {
   refreshTranslation(obj);
 }
 
+function computeMatrix(translation, rotation, scale) {
+  var mat = m4.translation(translation[0], translation[1], translation[2]);
+  mat = m4.xRotate(mat, rotation[0]);
+  mat = m4.yRotate(mat, rotation[1]);
+  mat = m4.zRotate(mat, rotation[2]);
+  mat = m4.scale(mat, scale[0], scale[1], scale[2]);
+  return mat;
+}
+
+function computeUniforms(object) {
+  object.uniforms.u_instanceWorld = computeMatrix(
+      object.translation,
+      object.rotation,
+      object.scale);
+  object.uniforms.u_texture = textures[object.material];
+}
+
 function refreshTranslation(obj) {
   obj.obj.translation = getCoords([obj.i, obj.j]);
 }
@@ -393,6 +431,23 @@ function update(time, deltaTime) {
   cameraMomentum = clamp(cameraMomentum * Math.pow(0.999, deltaTime), -.01, .01);
 
   camera.position = m4.transformPoint(m4.yRotation(cameraZ), cameraBase);
+}
+
+function onDraw(time, deltaTime, draw) {
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      const figure = field[getIndex([i, j])] - 1;
+      if (figure < 0) continue;
+      const isBlack = figure >= 6;
+      const shape = figuresByNumber[figure % 6];
+      const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
+      const scale = pawnScale;
+      const material = isBlack ? "black" : "white";
+      const obj = makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material);
+      computeUniforms(obj);
+      draw(obj);
+    }
+  }
 }
 
 async function main() {
@@ -458,25 +513,9 @@ async function main() {
 
   document.getElementById("text").textContent = "Warte auf 2. Spieler...";
 
-  var figuresByNumber = [models.pawn, models.tower, models.bishop, models.horse, models.king, models.queen];
+  figuresByNumber = [models.pawn, models.tower, models.bishop, models.horse, models.king, models.queen];
 
-  function makeObject(shape, translation, rotation, scale, material) {
-    return {
-      programInfo: programInfo,
-      isVisible: true,
-      bufferInfo: shape.bufferInfo,
-      vertexArray: shape.vao,
-      uniforms: {
-        u_instanceWorld: m4.identity(),
-      },
-      translation: translation,
-      rotation: rotation, // TODO: Use quaternion instead of euler
-      scale: scale,
-      material: material,
-    };
-  }
-
-  const textures = twgl.createTextures(gl, {
+  textures = twgl.createTextures(gl, {
     white: {src: [255, 255, 255, 255]},
     black: {src: [50, 50, 50, 255]},
     board: {src: "chessBoard.jpg"},
@@ -499,37 +538,14 @@ async function main() {
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
 
-	var figures = [];
-	for (let i = 0; i < 12; i++)	{
-		const isBlack = i >= 6;
-		const shape = figuresByNumber[i % 6];
-		const rotation = i % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
-		const scale = pawnScale;
-		const material = isBlack ? "black" : "white";
-		const obj = makeObject(shape, getCoords([-1, -1]), [0, rotation, 0], [scale, scale, scale], material);
-		figures.push(obj);
-	}
-	console.log(figures);
-	console.log(field);
-
-  function computeMatrix(translation, rotation, scale) {
-    var matrix = m4.translation(translation[0], translation[1], translation[2]);
-    // var matrix = m4.translation(translation);
-    matrix = m4.xRotate(matrix, rotation[0]);
-    matrix = m4.yRotate(matrix, rotation[1]);
-    matrix = m4.zRotate(matrix, rotation[2]);
-    matrix = m4.scale(matrix, scale[0], scale[1], scale[2]);
-    // return m4.multiply(viewProjectionMatrix, matrix);
-    return matrix;
-  }
-
   requestAnimationFrame(drawScene);
 
   var lastTime = 0;
 
   // Draw the scene.
   function drawScene(time) {
-    update(time, time - lastTime);
+    var deltaTime = time - lastTime;
+    update(time, deltaTime);
     lastTime = time;
 
     twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -552,13 +568,7 @@ async function main() {
     var viewMatrix = m4.inverse(cameraMatrix);
 
     // Compute the matrices for each object.
-    objects.forEach(function(object) {
-      object.uniforms.u_instanceWorld = computeMatrix(
-          object.translation,
-          object.rotation,
-          object.scale);
-      object.uniforms.u_texture = textures[object.material];
-    });
+    objects.forEach(computeUniforms);
 
 
     const sharedUniforms = {
@@ -579,10 +589,10 @@ async function main() {
     var lastUsedProgramInfo = null;
     var lastUsedVertexArray = null;
 
-    objects.forEach(function(object) {
+    function draw(object) {
       if (!object.isVisible) return;
-      var programInfo = object.programInfo;
-      var vertexArray = object.vertexArray;
+      var programInfo = object.info.programInfo;
+      var vertexArray = object.info.vertexArray;
 
       if (programInfo !== lastUsedProgramInfo) {
         lastUsedProgramInfo = programInfo;
@@ -600,39 +610,12 @@ async function main() {
       twgl.setUniforms(programInfo, object.uniforms);
 
       // Draw
-      twgl.drawBufferInfo(gl, object.bufferInfo);
-    });
+      twgl.drawBufferInfo(gl, object.info.bufferInfo);
+    }
 
-	  for(let i = 0; i < field.length; i++)	{
-		  if (field[i] == 0)	{
-			  continue;
-		  }
-		  let object = figures[field[i] -1];
+    objects.forEach(draw);
 
-		  object.uniforms.u_instanceWorld = computeMatrix(
-			  getCoords(getField(i)),
-			  object.rotation,
-			  object.scale);
-		  object.uniforms.u_texture = textures[object.material];
-
-		  var programInfo = object.programInfo;
-		  var vertexArray = object.vertexArray;
-
-		   if (programInfo !== lastUsedProgramInfo) {
-			   lastUsedProgramInfo = programInfo;
-			   gl.useProgram(programInfo.program);
-			   twgl.setUniforms(programInfo, sharedUniforms);
-		   }
-
-		  if (lastUsedVertexArray !== vertexArray) {
-			  lastUsedVertexArray = vertexArray;
-			  gl.bindVertexArray(vertexArray);
-		  }
-
-		  twgl.setUniforms(programInfo, object.uniforms);
-		  twgl.drawBufferInfo(gl, object.bufferInfo);
-	  }
-
+    onDraw(time, deltaTime, draw);
 
     requestAnimationFrame(drawScene);
   }
