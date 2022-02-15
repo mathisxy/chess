@@ -124,6 +124,37 @@ void main() {
 }
 `;
 
+var skyboxVertexShaderSource = `#version 300 es
+precision highp float;
+
+in vec4 a_position;
+out vec4 v_position;
+
+void main() {
+  v_position = a_position;
+  gl_Position = vec4(a_position.xy, 1, 1);
+}
+`;
+
+var skyboxFragmentShaderSource = `#version 300 es
+precision highp float;
+
+uniform samplerCube u_skybox2;
+uniform mat4 u_viewProjectionInverse;
+
+in vec4 v_position;
+
+// we need to declare an output for the fragment shader
+out vec4 outColor;
+
+void main() {
+  vec4 t = u_viewProjectionInverse * v_position;
+  // outColor = texture(u_skybox2, normalize(t.xyz / t.w));
+  outColor = texture(u_skybox2, normalize(vec3(v_position.x*2.0, v_position.y*2.0, 1)));
+}
+`;
+
+
 function sleep(ms)	{
   return new Promise(resolve => setTimeout(resolve, ms));  
 }
@@ -499,6 +530,7 @@ async function main() {
 
   // setup GLSL program
   var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
+  var skyboxProgramInfo = twgl.createProgramInfo(gl, [skyboxVertexShaderSource, skyboxFragmentShaderSource]);
 
   var models = {
     pawn: toWebGL(gl, programInfo, await fetchOBJ('weißerBauer.obj')),
@@ -522,12 +554,12 @@ async function main() {
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
       src: [
-        'skybox2.png',
-        'skybox4.png',
-        'skybox3.png',
-        'skybox5.png',
-        'skybox1.png',
-        'skybox6.png',
+        'cubemap/pos-x.jpg',
+        'cubemap/neg-x.jpg',
+        'cubemap/pos-y.jpg',
+        'cubemap/neg-y.jpg',
+        'cubemap/pos-z.jpg',
+        'cubemap/neg-z.jpg',
       ],
     }
   });
@@ -537,6 +569,9 @@ async function main() {
   const pointerObj = makeObject(models.pointer, getCoords(initialPointerField), [0, 0, 0], [.1, .1, .1], "board");
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
+
+  const quadBufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
+  const quadVAO = twgl.createVAOFromBufferInfo(gl, skyboxProgramInfo, quadBufferInfo);
 
   requestAnimationFrame(drawScene);
 
@@ -569,10 +604,11 @@ async function main() {
 
     // Compute the matrices for each object.
     objects.forEach(computeUniforms);
-
+    
+    var viewProjection = m4.multiply(projectionMatrix, viewMatrix);
 
     const sharedUniforms = {
-      u_viewProjection: m4.multiply(projectionMatrix, viewMatrix),
+      u_viewProjection: viewProjection,
       u_viewInverse: cameraMatrix,
 
       u_skybox: textures.skybox,
@@ -613,9 +649,21 @@ async function main() {
       twgl.drawBufferInfo(gl, object.info.bufferInfo);
     }
 
+    gl.depthFunc(gl.LESS);
+
     objects.forEach(draw);
 
     onDraw(time, deltaTime, draw);
+
+    gl.depthFunc(gl.LEQUAL);
+ 
+    gl.useProgram(skyboxProgramInfo.program);
+    twgl.setUniforms(programInfo, {
+      u_viewProjectionInverse: m4.inverse(viewProjection),
+      u_skybox2: textures.skybox, // TODO: Find out why I need a 2 as suffix to fix warning
+    });
+    gl.bindVertexArray(quadVAO);
+    twgl.drawBufferInfo(gl, quadBufferInfo);
 
     requestAnimationFrame(drawScene);
   }
