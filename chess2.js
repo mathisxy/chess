@@ -130,21 +130,21 @@ void main() {
 var skyboxVertexShaderSource = `#version 300 es
 precision highp float;
 
+uniform mat4 u_viewProjectionInverse;
+
 in vec4 a_position;
 out vec4 v_position;
 
 void main() {
-  v_position = a_position;
-  gl_Position = a_position;
-  gl_Position.z = 1.0;	//vec4(a_position.xy, 1, 1);
+  v_position = u_viewProjectionInverse * vec4(a_position.xy, 1, 1);
+  gl_Position = vec4(a_position.xy, 1, 1);
 }
 `;
 
 var skyboxFragmentShaderSource = `#version 300 es
 precision highp float;
 
-uniform samplerCube u_skybox2;
-uniform mat4 u_viewProjectionInverse;
+uniform samplerCube u_skybox;
 
 in vec4 v_position;
 
@@ -152,16 +152,12 @@ in vec4 v_position;
 out vec4 outColor;
 
 void main() {
-  vec4 t = u_viewProjectionInverse * v_position;
-  //outColor = t;
-  outColor = texture(u_skybox2, normalize(t.xyz / t.w));
-  //outColor = texture(u_skybox2, normalize(v_position.xyz/v_position.w));
-  //outColor = texture(u_skybox2, normalize(vec3(v_position.x*2.0, v_position.y*2.0, 1)));
+  outColor = texture(u_skybox, normalize(v_position.xyz));
 }
 `;
 
 
-function sleep(ms)	{
+function sleep(ms)  {
   return new Promise(resolve => setTimeout(resolve, ms));  
 }
 async function fetchOBJ(url) {
@@ -337,12 +333,9 @@ var camera = {
   target: board,
   up: [0, 1, 0],
   fov: 60 * Math.PI / 180,
+  near: 0.1,
+  far: 2000,
 };
-var cubeProjection = {
-	fov: 60 * Math.PI / 180,
-	near: 2000,
-	far: 2001,
-}
 
 function toggleView(color) {
   if (color == "w") {
@@ -580,15 +573,15 @@ async function main() {
   const quadBufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
   const quadVAO = twgl.createVAOFromBufferInfo(gl, skyboxProgramInfo, quadBufferInfo);
 
-	say("Warten auf anderen Spieler...", getCookie("session_color"));
-	while (true) {
-		if (full) {
-			break;
-		}
-		playerJoined();
-		await sleep(1000);
-	}
-	say("Weiß beginnt", "white");
+  say("Warten auf anderen Spieler...", getCookie("session_color"));
+  while (true) {
+    if (full) {
+      break;
+    }
+    playerJoined();
+    await sleep(1000);
+  }
+  say("Weiß beginnt", "white");
         await sleep(1);
 
   requestAnimationFrame(drawScene);
@@ -612,29 +605,22 @@ async function main() {
     // Compute the projection matrix
     var aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
     var projectionMatrix =
-        m4.perspective(camera.fov, aspect, 0.1, 2000);
-	  var cubeMapProjectionMatrix = 
-		  m4.perspective(cubeProjection.fov, aspect, cubeProjection.near, cubeProjection.far);
-
+        m4.perspective(camera.fov, aspect, camera.near, camera.far);
+    
     // Compute the camera's matrix using look at.
     var cameraMatrix = m4.lookAt(camera.position, camera.target, camera.up);
-	  var cubeMapCameraMatrix = m4.lookAt(camera.position, camera.target, camera.up);
-
+    
     // Make a view matrix from the camera matrix.
     var viewMatrix = m4.inverse(cameraMatrix);
-	  var cubeMapViewMatrix = m4.inverse(cameraMatrix);
 
 	  var viewProjectionMatrix =
 		  m4.multiply(projectionMatrix, viewMatrix);
-	  var cubeMapViewProjectionMatrix = 
-		  m4.multiply(cubeMapProjectionMatrix, cubeMapViewMatrix);
 
-	  var cubeMapViewProjectionInverseMatrix = 
-		  m4.inverse(cubeMapViewProjectionMatrix);
+    var viewProjectionInverseMatrix = 
+      m4.multiply(cameraMatrix, m4.inverse(projectionMatrix));
 
     // Compute the matrices for each object.
     objects.forEach(computeUniforms);
-
 
     const sharedUniforms = {
       u_viewProjection: viewProjectionMatrix,
@@ -689,8 +675,8 @@ async function main() {
  
     gl.useProgram(skyboxProgramInfo.program);
     twgl.setUniforms(skyboxProgramInfo, {
-      u_viewProjectionInverse: cubeMapViewProjectionInverseMatrix,
-      u_skybox2: textures.skybox, // TODO: Find out why I need a 2 as suffix to fix warning
+      u_viewProjectionInverse: viewProjectionInverseMatrix,
+      u_skybox: textures.skybox,
     });
 
     gl.bindVertexArray(quadVAO);
