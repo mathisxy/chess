@@ -132,7 +132,8 @@ out vec4 v_position;
 
 void main() {
   v_position = a_position;
-  gl_Position = vec4(a_position.xy, 1, 1);
+  gl_Position = a_position;
+  gl_Position.z = 1.0;	//vec4(a_position.xy, 1, 1);
 }
 `;
 
@@ -140,7 +141,7 @@ var skyboxFragmentShaderSource = `#version 300 es
 precision highp float;
 
 uniform samplerCube u_skybox2;
-uniform mat4 u_viewProjectionInverse;
+uniform mat4 u_viewDirectionProjectionInverse;
 
 in vec4 v_position;
 
@@ -148,9 +149,11 @@ in vec4 v_position;
 out vec4 outColor;
 
 void main() {
-  vec4 t = u_viewProjectionInverse * v_position;
-  // outColor = texture(u_skybox2, normalize(t.xyz / t.w));
-  outColor = texture(u_skybox2, normalize(vec3(v_position.x*2.0, v_position.y*2.0, 1)));
+  vec4 t = u_viewDirectionProjectionInverse * v_position;
+  outColor = t;
+  //outColor = texture(u_skybox2, normalize(t.xyz / t.w));
+  //outColor = texture(u_skybox2, normalize(v_position.xyz/v_position.w));
+  //outColor = texture(u_skybox2, normalize(vec3(v_position.x*2.0, v_position.y*2.0, 1)));
 }
 `;
 
@@ -600,13 +603,17 @@ async function main() {
     // Make a view matrix from the camera matrix.
     var viewMatrix = m4.inverse(cameraMatrix);
 
+	  var viewDirectionProjectionMatrix =
+		  m4.multiply(projectionMatrix, viewMatrix);
+	  var viewDirectionProjectionInverseMatrix = 
+		  m4.inverse(viewDirectionProjectionMatrix);
+
     // Compute the matrices for each object.
     objects.forEach(computeUniforms);
-    
-    var viewProjection = m4.multiply(projectionMatrix, viewMatrix);
+
 
     const sharedUniforms = {
-      u_viewProjection: viewProjection,
+      u_viewProjection: viewDirectionProjectionMatrix,
       u_viewInverse: cameraMatrix,
 
       u_skybox: textures.skybox,
@@ -657,7 +664,7 @@ async function main() {
  
     gl.useProgram(skyboxProgramInfo.program);
     twgl.setUniforms(programInfo, {
-      u_viewProjectionInverse: m4.inverse(viewProjection),
+      u_viewDirectionProjectionInverse: m4.identity(),
       u_skybox2: textures.skybox, // TODO: Find out why I need a 2 as suffix to fix warning
     });
     gl.bindVertexArray(quadVAO);
