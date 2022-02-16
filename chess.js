@@ -515,7 +515,8 @@ function touchFigure() {
   }
   console.log(field);
 }
-
+function addVec3(a, b)	{ return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+function equals2d(a, b)	{ return (a[0] == b[0] && a[1] == b[1]); }
 function clamp(x, min, max) { return x < min ? min : x > max ? max : x; }
 
 function assignpos(obj, i, j) {
@@ -571,7 +572,8 @@ function onDraw(time, deltaTime, draw) {
       const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
       const material = isBlack ? materials.black : materials.white;
-      const obj = makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material);
+	const hover = equals2d(field, activeField) ? [0.0, 0.0, 0.0] : [0.0, hoverIntensity, 0.0];
+      const obj = makeObject(shape, add(getCoords([i, j]), hover), [0, rotation, 0], [scale, scale, scale], material);
       computeUniforms(obj);
       draw(obj);
     }
