@@ -558,8 +558,9 @@ function update(time, deltaTime) {
   camera.position = m4.transformPoint(m4.yRotation(cameraZ), cameraBase);
 
   lights[0].position = m4.transformPoint(m4.yRotation(deltaTime * 0.0005), lights[0].position);
-  lights[1].position = m4.transformPoint(m4.yRotation(deltaTime * -0.0001), lights[1].position);
-  lights[2].position = m4.transformPoint(m4.yRotation(deltaTime * 0.0002), lights[2].position);
+  lights[1].position = m4.transformPoint(m4.zRotation(deltaTime * -0.0004), lights[1].position);
+  lights[2].position = m4.transformPoint(m4.yRotation(deltaTime * 0.0006), lights[2].position);
+  lights[3].position = m4.transformPoint(m4.xRotation(deltaTime * 0.0002), lights[3].position);
 }
 
 function onDraw(time, deltaTime, draw) {

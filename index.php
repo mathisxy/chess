@@ -300,9 +300,9 @@ text-align: center;
 
 <script src="https://webgl2fundamentals.org/webgl/resources/twgl-full.min.js"></script>
 <script src="https://webgl2fundamentals.org/webgl/resources/m4.js"></script>
-<script src="https://webgl2fundamentals.org/webgl/resources/texture-utils.js"></script>
+<!-- <script src="https://webgl2fundamentals.org/webgl/resources/texture-utils.js"></script>
 <script src="https://webgl2fundamentals.org/webgl/resources/chroma.min.js"></script>
-<script src="https://webgl2fundamentals.org/webgl/resources/flattened-primitives.js"></script>
+<script src="https://webgl2fundamentals.org/webgl/resources/flattened-primitives.js"></script> -->
 <!-- <script src="twgl.primitives.createCubeVertices"></script> -->
 
 <script src="chess.js"></script>
