@@ -306,6 +306,5 @@ text-align: center;
 <!-- <script src="twgl.primitives.createCubeVertices"></script> -->
 
 <script src="chess.js"></script>
-</script>main()</script>
 </body>
 </html>

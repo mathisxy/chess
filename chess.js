@@ -16,6 +16,10 @@ vec4 decodeColor(vec4 color) {
 vec4 encodeColor(vec4 color) {
   return vec4(pow(color.rgb, vec3(1.0/u_gamma)), color.a);
 }
+
+vec3 encodeColor(vec3 color) {
+  return pow(color.rgb, vec3(1.0/u_gamma));
+}
 `;
 
 var vs = vsPrelude + `
@@ -33,7 +37,7 @@ out vec4 v_position;
 out vec3 v_normal;
 out vec2 v_texcoord;
 out vec3 v_viewToSurface;
-out vec3 v_surfaceToLight;
+out vec3 v_worldPosition;
 out vec3 v_surfaceToView;
 
 void main() {
@@ -42,7 +46,7 @@ void main() {
   vec4 worldPosition = u_instanceWorld * a_position;
   v_position = u_viewProjection * worldPosition;
   v_normal = mat3(u_instanceWorld) * a_normal;
-  v_surfaceToLight = u_lightWorldPos - worldPosition.xyz;
+  v_worldPosition = worldPosition.xyz;
   v_surfaceToView = u_viewInverse[3].xyz - worldPosition.xyz;
   gl_Position = v_position;
 }
@@ -53,18 +57,29 @@ in vec4 v_position;
 in vec3 v_normal;
 in vec2 v_texcoord;
 in vec3 v_viewToSurface;
-in vec3 v_surfaceToLight;
+in vec3 v_worldPosition;
 in vec3 v_surfaceToView;
 
-uniform sampler2D u_texture;
+uniform sampler2D u_albedo;
+uniform sampler2D u_metallic;
+uniform sampler2D u_roughness;
+uniform sampler2D u_ao;
+uniform sampler2D u_normal;
+
 uniform samplerCube u_skybox;
 uniform samplerCube u_skylight;
 
-uniform vec4 u_lightColor;
-uniform vec4 u_ambient;
-uniform vec4 u_specular;
-uniform float u_shininess;
-uniform float u_specularFactor;
+struct Light {
+  vec3 position;
+  vec3 color;
+  float intensity;
+};
+
+uniform Light u_lights[4];
+uniform Light u_light;
+uniform int u_lightCount;
+
+uniform vec3 u_ambient;
 
 out vec4 outColor;
 
@@ -112,29 +127,63 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 }
 
 void main() {
-  vec4 diffuseColor = decodeColor(texture(u_texture, v_texcoord));
-  vec3 normal = normalize(v_normal);
-  vec3 surfaceToLight = normalize(v_surfaceToLight);
+  vec3 albedo = decodeColor(texture(u_albedo, v_texcoord)).xyz;
+  float metallic = texture(u_metallic, v_texcoord).x;
+  float roughness = texture(u_roughness, v_texcoord).x;
+  float ao = texture(u_ao, v_texcoord).x;
+  vec4 normalMap = texture(u_normal, v_texcoord);
+
   vec3 surfaceToView = normalize(v_surfaceToView);
 
-  vec3 halfVector = normalize(surfaceToLight + surfaceToView);
+  vec3 normal = normalize(v_normal);
 
+  vec3 Lo = vec3(0.0);
+  for (int i = 0; i < u_lightCount; ++i) {
+    Light light = u_lights[i];
+    light = u_light;
+
+    vec3 surfaceToLight = light.position - v_worldPosition;
+
+    vec3 L = normalize(surfaceToLight);
+    vec3 H = normalize(surfaceToView + L);
+  
+    float distance    = length(surfaceToLight); // Please be smart about the sqrt glsl
+    float attenuation = 1.0 / (distance * distance);
+    vec3 radiance     = light.color * attenuation; 
+
+    vec3 f0 = vec3(0.04);
+    f0 = mix(f0, albedo, metallic);
+    vec3 f = fresnelSchlick(max(dot(H, surfaceToView), 0.0), f0);
+
+    float NDF = DistributionGGX(normal, H, roughness);
+    float G   = GeometrySmith(normal, surfaceToView, L, roughness);
+
+    vec3 numerator    = NDF * G * f;
+    float denominator = 4.0 * max(dot(normal, surfaceToView), 0.0) * max(dot(normal, L), 0.0) + 0.0001;
+    vec3 specular     = numerator / denominator;  
+
+    vec3 kS = f;
+    vec3 kD = vec3(1.0) - kS;
+      
+    kD *= 1.0 - metallic;	
+
+    const float PI = 3.14159265359;
+    
+    float NdotL = max(dot(normal, L), 0.0);        
+    Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+  }
+
+  vec3 ambient = u_ambient * albedo * ao;
+  vec3 color   = ambient + Lo;  
+  
+  color = color / (color + vec3(1.0));
+  
   vec3 reflectDir = reflect(surfaceToView * -1.0, normal);
   vec4 reflectColor = texture(u_skybox, reflectDir);
 
-  vec4 litR = lit(dot(normal, surfaceToLight),
-                    dot(normal, halfVector), u_shininess);
-	vec4 skyLight = texture(u_skylight, normal);
-
-  vec4 finalColor = vec4(
-      (u_lightColor
-        * (diffuseColor * litR.y
-          + diffuseColor * u_ambient
-          + reflectColor * u_specular * litR.z * u_specularFactor)
-      ).rgb,
-      diffuseColor.a);
-
-  outColor = encodeColor( 0.0 * reflectColor + 0.8 * skyLight);
+  outColor = vec4(encodeColor(color), 1);
+  outColor = vec4(u_light.color, 1);
+  // outColor = vec4(vec3(u_ambient), 1);
 }
 `;
 
@@ -326,7 +375,8 @@ const figureNames = ["Bauer", "Turm", "Pferd", "Läufer", "König", "Dame"];
 var figuresByNumber = null;
 var pointer = null;
 var objects = [];
-var textures = [];
+var textures = null;
+var materials = null;
 var cameraBase = [0, 0.2, 2];
 var cameraZ = 0;
 var cameraMomentum = 0;
@@ -341,6 +391,7 @@ var camera = {
   fov: 60 * Math.PI / 180,
   near: 0.1,
   far: 2000,
+  gamma: 2.2,
 };
 
 function toggleView(color) {
@@ -459,7 +510,11 @@ function computeUniforms(object) {
       object.translation,
       object.rotation,
       object.scale);
-  object.uniforms.u_texture = textures[object.material];
+  object.uniforms.u_albedo = object.material.albedo ?? textures.trueBlack;
+  object.uniforms.u_metallic = object.material.metallic ?? textures.trueBlack;
+  object.uniforms.u_roughness = object.material.roughness ?? textures.trueBlack;  
+  object.uniforms.u_ao = object.material.ao ?? textures.trueWhite;
+  object.uniforms.u_normal = object.material.normal ?? textures.defaultNormal;
 }
 
 function refreshTranslation(obj) {
@@ -483,7 +538,7 @@ function onDraw(time, deltaTime, draw) {
       const shape = figuresByNumber[figure % 6];
       const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
-      const material = isBlack ? "black" : "white";
+      const material = isBlack ? materials.black : materials.white;
       const obj = makeObject(shape, getCoords([i, j]), [0, rotation, 0], [scale, scale, scale], material);
       computeUniforms(obj);
       draw(obj);
@@ -555,7 +610,10 @@ async function main() {
   textures = twgl.createTextures(gl, {
     white: {src: [255, 255, 255, 255]},
     black: {src: [50, 50, 50, 255]},
-    board: {src: 'textures/chessBoard.jpg'},
+    trueWhite: {src: [255, 255, 255, 255]},
+    trueBlack: {src: [0, 0, 0, 255]},
+    defaultNormal: {src: [0, 255, 0, 255]},
+    board: {src: "textures/chessBoard.jpg"},
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
       src: [
@@ -567,22 +625,29 @@ async function main() {
         'textures/cubemap/nz.jpg',
       ],
     },
-	skylight:	{
-		target: gl.TEXTURE_CUBE_MAP,
-		src: [
-			'textures/cubemap/pxb.jpg',
-			'textures/cubemap/nxb.jpg',
-			'textures/cubemap/pyb.jpg',
-			'textures/cubemap/nyb.jpg',
-			'textures/cubemap/pzb.jpg',
-			'textures/cubemap/nzb.jpg',
-		],
-	}
+    skylight:	{
+      target: gl.TEXTURE_CUBE_MAP,
+      src: [
+        'textures/cubemap/pxb.jpg',
+        'textures/cubemap/nxb.jpg',
+        'textures/cubemap/pyb.jpg',
+        'textures/cubemap/nyb.jpg',
+        'textures/cubemap/pzb.jpg',
+        'textures/cubemap/nzb.jpg',
+      ],
+    }
   });
 
-  objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], "board"));
+  materials = {
+    board: { albedo: textures.board, },
+    pointer: { albedo: textures.board, },
+    white: { albedo: textures.white, },
+    black: { albedo: textures.black, },
+  };
 
-  const pointerObj = makeObject(models.pointer, getCoords(initialPointerField), [0, 0, 0], [.1, .1, .1], "board");
+  objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], materials.board));
+
+  const pointerObj = makeObject(models.pointer, getCoords(initialPointerField), [0, 0, 0], [.1, .1, .1], materials.pointer);
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
 
@@ -598,7 +663,7 @@ async function main() {
     await sleep(1000);
   }
   say("Weiß beginnt", "white");
-        await sleep(1);
+  await sleep(1);
 
   requestAnimationFrame(drawScene);
 
@@ -643,13 +708,22 @@ async function main() {
       u_viewInverse: cameraMatrix,
 
       u_skybox: textures.skybox,
-	u_skylight: textures.skylight,
-      u_lightWorldPos: [1, 8, -30],
-      u_lightColor: [1, 1, 1, 1],
-      u_ambient: [0, 0, 0, 1],
-      u_specular: [1, 1, 1, 1],
-      u_shininess: 50,
-      u_specularFactor: 1,
+	    u_skylight: textures.skylight,
+
+      u_lights: [
+        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
+        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
+        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
+        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
+      ],
+      
+      u_light: { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
+
+      // "u_lights[0]": { position: [1, 8, -30], color: [1, 1, 1], intensity: 1},
+
+      u_lightCount: 1,
+      
+      u_ambient: [0.1, 0.1, 0.2],
       
       u_gamma: 2.2,
     };
@@ -695,7 +769,7 @@ async function main() {
     twgl.setUniforms(skyboxProgramInfo, {
       u_viewProjectionInverse: viewProjectionInverseMatrix,
       u_skybox: textures.skybox,
-      u_gamma: 2.2,
+      u_gamma: camera.gamma,
     });
 
     gl.bindVertexArray(quadVAO);
@@ -704,3 +778,5 @@ async function main() {
     requestAnimationFrame(drawScene);
   }
 }
+
+main();
