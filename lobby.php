@@ -60,7 +60,7 @@ while (true)	{
 		sessions.innerHTML = req.response;
 	}
 	req.send();
-	await sleep(3000);
+	await sleep(2000);
 }
 }
 function sleep(ms) {
