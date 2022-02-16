@@ -200,7 +200,7 @@ void main() {
     outColor = vec4(encodeColor(color), 1);
     // outColor = vec4(texture(u_brdfLuT, v_texcoord).xyz, 1);
     // outColor = vec4(vec3(pow(roughness, 10.0)), 1);
-    // outColor = vec4(vec3(roughness), 1);
+    // outColor = vec4(Lo, 1);
   }
 }
 `;
@@ -654,6 +654,7 @@ async function main() {
     bishop: toWebGL(gl, programInfo, await fetchOBJ('models/weißerLäufer.obj')),
     board: toWebGL(gl, programInfo, await fetchOBJ('models/cube.obj')),
     pointer: toWebGL(gl, programInfo, await fetchOBJ('models/pointer.obj')),
+    sphere: toWebGL(gl, programInfo, await fetchOBJ('models/sphere.obj')),
   }
 
   figuresByNumber = [models.pawn, models.tower, models.bishop, models.horse, models.king, models.queen];
@@ -669,8 +670,15 @@ async function main() {
     defaultNormal: {src: [0, 255, 0, 255]},
 
     board: {src: "textures/chessBoard.jpg"},
-    // boardNrm: {src: "textures/PlasticRough002_NRM_1K.jpg"},
+    boardNrm: {src: "textures/PlasticRough002_NRM_1K.jpg"},
     boardRefl: {src: "textures/PlasticRough002_GLOSS_1K.jpg"},
+
+    plastic: {src: "textures/PlasticRough002_COL_1K.jpg"},
+
+    metal: {src: "textures/MetalCorrodedHeavy001_COL_1K_METALNESS.jpg"},
+    metalMetallic: {src: "textures/MetalCorrodedHeavy001_METALNESS_1K_METALNESS.jpg"},
+    metalRough: {src: "textures/MetalCorrodedHeavy001_ROUGHNESS_1K_METALNESS.jpg"},
+
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
       src: [
@@ -701,10 +709,17 @@ async function main() {
     pointer: { albedo: textures.board, metallic: solidTexture(gl, 255), },
     white: { albedo: textures.white, roughness: solidTexture(gl, 150), },
     black: { albedo: textures.black, roughness: solidTexture(gl, 130), },
+    test: { albedo: textures.metal, roughness: textures.metalRough, metallic: textures.metalMetallic, },
+    test2: { albedo: textures.plastic, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
+    test3: { albedo: textures.plastic, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
   };
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], materials.board));
 
+  objects.push(makeObject(models.sphere, [0, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test));
+  objects.push(makeObject(models.sphere, [0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test2));
+  objects.push(makeObject(models.sphere, [-0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test3));
+  
   const pointerObj = makeObject(models.pointer, getCoords(initialPointerField), [0, 0, 0], [.1, .1, .1], materials.pointer);
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
