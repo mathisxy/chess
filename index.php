@@ -305,7 +305,7 @@ text-align: center;
 <script src="https://webgl2fundamentals.org/webgl/resources/flattened-primitives.js"></script>
 <!-- <script src="twgl.primitives.createCubeVertices"></script> -->
 
-<script src="chess2.js"></script>
+<script src="chess.js"></script>
 </script>main()</script>
 </body>
 </html>
