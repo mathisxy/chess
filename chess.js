@@ -76,7 +76,6 @@ struct Light {
 };
 
 uniform Light u_lights[4];
-uniform Light u_light;
 uniform int u_lightCount;
 
 uniform vec3 u_ambient;
@@ -140,7 +139,6 @@ void main() {
   vec3 Lo = vec3(0.0);
   for (int i = 0; i < u_lightCount; ++i) {
     Light light = u_lights[i];
-    light = u_light;
 
     vec3 surfaceToLight = light.position - v_worldPosition;
 
@@ -182,7 +180,7 @@ void main() {
   vec4 reflectColor = texture(u_skybox, reflectDir);
 
   outColor = vec4(encodeColor(color), 1);
-  outColor = vec4(u_light.color, 1);
+  // outColor = vec4(u_light.color, 1);
   // outColor = vec4(vec3(u_ambient), 1);
 }
 `;
@@ -710,16 +708,9 @@ async function main() {
       u_skybox: textures.skybox,
 	    u_skylight: textures.skylight,
 
-      u_lights: [
-        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
-        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
-        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
-        { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
-      ],
-      
-      u_light: { position: [1, 8, -30], color: [1, 1, 1], intensity: 1.0 },
-
-      // "u_lights[0]": { position: [1, 8, -30], color: [1, 1, 1], intensity: 1},
+      "u_lights[0].position": [1, 8, -30],
+      "u_lights[0].color": [1, 1, 1],
+      "u_lights[0].intensity": 1.0,
 
       u_lightCount: 1,
       
@@ -742,6 +733,10 @@ async function main() {
         lastUsedProgramInfo = programInfo;
         gl.useProgram(programInfo.program);
         twgl.setUniforms(programInfo, sharedUniforms);
+
+        // programInfo.uniformSetters["u_light.color"]([1, 1, 1]);
+        // var l = gl.getUniformLocation(programInfo.program, "u_light.color");
+        // gl.uniform3f(l, 1, 1, 1);
       }
 
       // Setup all the needed attributes.
