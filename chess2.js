@@ -58,6 +58,7 @@ in vec3 v_surfaceToView;
 
 uniform sampler2D u_texture;
 uniform samplerCube u_skybox;
+uniform samplerCube u_skylight;
 
 uniform vec4 u_lightColor;
 uniform vec4 u_ambient;
@@ -123,6 +124,7 @@ void main() {
 
   vec4 litR = lit(dot(normal, surfaceToLight),
                     dot(normal, halfVector), u_shininess);
+	vec4 skyLight = texture(u_skylight, normal);
 
   vec4 finalColor = vec4(
       (u_lightColor
@@ -132,7 +134,7 @@ void main() {
       ).rgb,
       diffuseColor.a);
 
-  outColor = encodeColor(0.2 * reflectColor + 0.8 * diffuseColor);
+  outColor = encodeColor( 0.0 * reflectColor + 0.8 * skyLight);
 }
 `;
 
@@ -554,7 +556,18 @@ async function main() {
         'pz.jpg',
         'nz.jpg',
       ],
-    }
+    },
+	skylight:	{
+		target: gl.TEXTURE_CUBE_MAP,
+		src: [
+			'pxb.jpg',
+			'nxb.jpg',
+			'pyb.jpg',
+			'nyb.jpg',
+			'pzb.jpg',
+			'nzb.jpg',
+		],
+	}
   });
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], "board"));
@@ -620,6 +633,7 @@ async function main() {
       u_viewInverse: cameraMatrix,
 
       u_skybox: textures.skybox,
+	u_skylight: textures.skylight,
       u_lightWorldPos: [1, 8, -30],
       u_lightColor: [1, 1, 1, 1],
       u_ambient: [0, 0, 0, 1],
