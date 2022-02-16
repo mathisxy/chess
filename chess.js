@@ -669,7 +669,7 @@ async function main() {
     defaultNormal: {src: [0, 255, 0, 255]},
 
     board: {src: "textures/chessBoard.jpg"},
-    boardNrm: {src: "textures/PlasticRough002_NRM_1K.jpg"},
+    // boardNrm: {src: "textures/PlasticRough002_NRM_1K.jpg"},
     boardRefl: {src: "textures/PlasticRough002_GLOSS_1K.jpg"},
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
@@ -771,7 +771,7 @@ async function main() {
 
       u_lightCount: lights.length,
       
-      u_gamma: 2.2,
+      u_gamma: camera.gamma,
     };
 
     lights.forEach((l, ndx) => {
