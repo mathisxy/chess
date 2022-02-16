@@ -395,6 +395,7 @@ var pointer = null;
 var objects = [];
 var textures = null;
 var materials = null;
+var debugObjects = null;
 var cameraBase = [0, 0.2, 2];
 var cameraZ = 0;
 var cameraMomentum = 0;
@@ -415,7 +416,7 @@ var camera = {
 };
 
 var lights = [
-  { position: [1, 8, 30], color: [1, 1, 1], intensity: 2000.0 },
+  { position: [1, 8, 30], color: [1, 1, 1], intensity: 6000.0 },
   { position: [1, 1, 2], color: [1, 0, 0], intensity: rgbLamps },
   { position: [1, .5, 1], color: [0, 1, 0], intensity: rgbLamps/2 },
   { position: [1, .2, 3], color: [0, 0, 1], intensity: rgbLamps },
@@ -589,6 +590,15 @@ function solidTexture(gl, w) {
   return twgl.createTexture(gl, {src: [w, w, w, 1]});
 }
 
+function toggleDebugObjects() {
+  debugObjects.forEach(x => x.isVisible = !x.isVisible);
+}
+
+function setRgbLights(intensity) {
+  rgbLamps = intensity;
+  lights[1].intensity = lights[2].intensity = lights[3].intensity = intensity;
+}
+
 async function main() {
   if (typeof whiteView === 'undefined') {
     alert("Bitte die Lobby verwenden um einem Spiel beizutreten");
@@ -661,7 +671,7 @@ async function main() {
 
   textures = twgl.createTextures(gl, {
     white: {src: [255, 255, 255, 255]},
-    black: {src: [50, 50, 50, 255]},
+    black: {src: [40, 40, 40, 255]},
 
     grey: {src: [140, 140, 140, 255]},
 
@@ -715,14 +725,19 @@ async function main() {
   };
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], materials.board));
-
-  objects.push(makeObject(models.sphere, [0, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test));
-  objects.push(makeObject(models.sphere, [0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test2));
-  objects.push(makeObject(models.sphere, [-0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test3));
   
   const pointerObj = makeObject(models.pointer, getCoords(initialPointerField), [0, 0, 0], [.1, .1, .1], materials.pointer);
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
+
+  debugObjects = [
+    makeObject(models.sphere, [0, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test),
+    makeObject(models.sphere, [0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test2),
+    makeObject(models.sphere, [-0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test3),
+  ];
+  toggleDebugObjects();
+
+  objects.push(...debugObjects);
 
   const quadBufferInfo = twgl.primitives.createXYQuadBufferInfo(gl);
   const quadVAO = twgl.createVAOFromBufferInfo(gl, skyboxProgramInfo, quadBufferInfo);
