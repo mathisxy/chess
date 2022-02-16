@@ -199,7 +199,8 @@ void main() {
 
     outColor = vec4(encodeColor(color), 1);
     // outColor = vec4(texture(u_brdfLuT, v_texcoord).xyz, 1);
-    // outColor = vec4(vec3(dbg/10), 1);
+    // outColor = vec4(vec3(pow(roughness, 10.0)), 1);
+    // outColor = vec4(vec3(roughness), 1);
   }
 }
 `;
@@ -668,6 +669,8 @@ async function main() {
     defaultNormal: {src: [0, 255, 0, 255]},
 
     board: {src: "textures/chessBoard.jpg"},
+    boardNrm: {src: "textures/PlasticRough002_NRM_1K.jpg"},
+    boardRefl: {src: "textures/PlasticRough002_GLOSS_1K.jpg"},
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
       src: [
@@ -694,7 +697,7 @@ async function main() {
   });
 
   materials = {
-    board: { albedo: textures.board, roughness: solidTexture(gl, 50), },
+    board: { albedo: textures.board, roughness: textures.boardRefl, },
     pointer: { albedo: textures.board, metallic: solidTexture(gl, 255), },
     white: { albedo: textures.white, roughness: solidTexture(gl, 150), },
     black: { albedo: textures.black, roughness: solidTexture(gl, 130), },
