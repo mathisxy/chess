@@ -14,10 +14,12 @@ vec4 decodeColor(vec4 color) {
 }
 
 vec4 encodeColor(vec4 color) {
+  color = color / (color + vec4(1.0));
   return vec4(pow(color.rgb, vec3(1.0/u_gamma)), color.a);
 }
 
 vec3 encodeColor(vec3 color) {
+  color = color / (color + vec3(1.0));
   return pow(color.rgb, vec3(1.0/u_gamma));
 }
 `;
@@ -68,6 +70,7 @@ uniform sampler2D u_normal;
 
 uniform samplerCube u_skybox;
 uniform samplerCube u_skylight;
+uniform sampler2D u_brdfLuT;
 
 struct Light {
   vec3 position;
@@ -125,16 +128,25 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
   return F0 + (1.0 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
+{
+  return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
+
 void main() {
   vec3 albedo = decodeColor(texture(u_albedo, v_texcoord)).xyz;
   float metallic = texture(u_metallic, v_texcoord).x;
   float roughness = texture(u_roughness, v_texcoord).x;
   float ao = texture(u_ao, v_texcoord).x;
-  vec4 normalMap = texture(u_normal, v_texcoord);
+  vec3 normalMap = texture(u_normal, v_texcoord).xyz;
+  normalMap = normalize(normalMap * 2.0 - 1.0);
 
   vec3 surfaceToView = normalize(v_surfaceToView);
 
   vec3 normal = normalize(v_normal);
+
+  vec3 f0 = vec3(0.04);
+  f0 = mix(f0, albedo, metallic);
 
   vec3 Lo = vec3(0.0);
   for (int i = 0; i < u_lightCount; ++i) {
@@ -147,10 +159,8 @@ void main() {
   
     float distance    = length(surfaceToLight); // Please be smart about the sqrt glsl
     float attenuation = 1.0 / (distance * distance);
-    vec3 radiance     = light.color * attenuation; 
+    vec3 radiance     = light.color * attenuation * light.intensity; 
 
-    vec3 f0 = vec3(0.04);
-    f0 = mix(f0, albedo, metallic);
     vec3 f = fresnelSchlick(max(dot(H, surfaceToView), 0.0), f0);
 
     float NDF = DistributionGGX(normal, H, roughness);
@@ -171,17 +181,26 @@ void main() {
     Lo += (kD * albedo / PI + specular) * radiance * NdotL;
   }
 
-  vec3 ambient = u_ambient * albedo * ao;
-  vec3 color   = ambient + Lo;  
-  
-  color = color / (color + vec3(1.0));
-  
-  vec3 reflectDir = reflect(surfaceToView * -1.0, normal);
-  vec4 reflectColor = texture(u_skybox, reflectDir);
+  {
+    vec3 kS = fresnelSchlickRoughness(max(dot(normal, surfaceToView), 0.0), f0, roughness); 
+    vec3 kD = 1.0 - kS;
+    vec3 irradiance = texture(u_skylight, normal).rgb;
+    vec3 diffuse    = irradiance * albedo;
 
-  outColor = vec4(encodeColor(color), 1);
-  // outColor = vec4(u_light.color, 1);
-  // outColor = vec4(vec3(u_ambient), 1);
+    vec3 reflectDir = reflect(surfaceToView * -1.0, normal);
+    vec3 reflectColor = texture(u_skybox, reflectDir).xyz;  // prefilteredColor but not actually pre filtered
+    vec2 envBRDF = texture(u_brdfLuT, vec2(max(dot(normal, surfaceToView), 0.0), roughness)).xy;
+    vec3 specular = reflectColor * (kS * envBRDF.x + envBRDF.y);
+
+    vec3 ambient    = (kD * diffuse + specular) * ao; 
+
+    // ambient = ambient * albedo * ao;
+    vec3 color   = ambient + Lo;
+
+    outColor = vec4(encodeColor(color), 1);
+    // outColor = vec4(texture(u_brdfLuT, v_texcoord).xyz, 1);
+    // outColor = vec4(vec3(dbg/10), 1);
+  }
 }
 `;
 
@@ -382,6 +401,8 @@ var figures = [];
 var activeField = null;
 var hoverIntensity = 0;
 
+var rgbLamps = 80.0;
+
 var camera = {
   position: [0, 0, 5],
   target: board,
@@ -391,6 +412,13 @@ var camera = {
   far: 2000,
   gamma: 2.2,
 };
+
+var lights = [
+  { position: [1, 8, 30], color: [1, 1, 1], intensity: 2000.0 },
+  { position: [1, 1, 2], color: [1, 0, 0], intensity: rgbLamps },
+  { position: [1, .5, 1], color: [0, 1, 0], intensity: rgbLamps/2 },
+  { position: [1, .2, 3], color: [0, 0, 1], intensity: rgbLamps },
+]
 
 function toggleView(color) {
   if (color == "w") {
@@ -510,7 +538,7 @@ function computeUniforms(object) {
       object.scale);
   object.uniforms.u_albedo = object.material.albedo ?? textures.trueBlack;
   object.uniforms.u_metallic = object.material.metallic ?? textures.trueBlack;
-  object.uniforms.u_roughness = object.material.roughness ?? textures.trueBlack;  
+  object.uniforms.u_roughness = object.material.roughness ?? textures.grey;  
   object.uniforms.u_ao = object.material.ao ?? textures.trueWhite;
   object.uniforms.u_normal = object.material.normal ?? textures.defaultNormal;
 }
@@ -525,6 +553,10 @@ function update(time, deltaTime) {
   cameraMomentum = clamp(cameraMomentum * Math.pow(0.999, deltaTime), -.01, .01);
 
   camera.position = m4.transformPoint(m4.yRotation(cameraZ), cameraBase);
+
+  lights[0].position = m4.transformPoint(m4.yRotation(deltaTime * 0.0005), lights[0].position);
+  lights[1].position = m4.transformPoint(m4.yRotation(deltaTime * -0.0001), lights[1].position);
+  lights[2].position = m4.transformPoint(m4.yRotation(deltaTime * 0.0002), lights[2].position);
 }
 
 function onDraw(time, deltaTime, draw) {
@@ -542,6 +574,18 @@ function onDraw(time, deltaTime, draw) {
       draw(obj);
     }
   }
+}
+
+function solidTexture(gl, r, g, b, a) {
+  return twgl.createTexture(gl, {src: [r, g, b, a]});
+}
+
+function solidTexture(gl, r, g, b) {
+  return twgl.createTexture(gl, {src: [r, g, b, 1]});
+}
+
+function solidTexture(gl, w) {
+  return twgl.createTexture(gl, {src: [w, w, w, 1]});
 }
 
 async function main() {
@@ -608,9 +652,13 @@ async function main() {
   textures = twgl.createTextures(gl, {
     white: {src: [255, 255, 255, 255]},
     black: {src: [50, 50, 50, 255]},
+
+    grey: {src: [140, 140, 140, 255]},
+
     trueWhite: {src: [255, 255, 255, 255]},
     trueBlack: {src: [0, 0, 0, 255]},
     defaultNormal: {src: [0, 255, 0, 255]},
+
     board: {src: "textures/chessBoard.jpg"},
     skybox: {
       target: gl.TEXTURE_CUBE_MAP,
@@ -633,14 +681,15 @@ async function main() {
         'textures/cubemap/pzb.jpg',
         'textures/cubemap/nzb.jpg',
       ],
-    }
+    },
+    ibl_brdf_lut: {src: "textures/ibl_brdf_lut.png"},
   });
 
   materials = {
-    board: { albedo: textures.board, },
-    pointer: { albedo: textures.board, },
-    white: { albedo: textures.white, },
-    black: { albedo: textures.black, },
+    board: { albedo: textures.board, roughness: solidTexture(gl, 50), },
+    pointer: { albedo: textures.board, metallic: solidTexture(gl, 255), },
+    white: { albedo: textures.white, roughness: solidTexture(gl, 150), },
+    black: { albedo: textures.black, roughness: solidTexture(gl, 130), },
   };
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], materials.board));
@@ -707,17 +756,18 @@ async function main() {
 
       u_skybox: textures.skybox,
 	    u_skylight: textures.skylight,
+      u_brdfLuT: textures.ibl_brdf_lut,
 
-      "u_lights[0].position": [1, 8, -30],
-      "u_lights[0].color": [1, 1, 1],
-      "u_lights[0].intensity": 1.0,
-
-      u_lightCount: 1,
-      
-      u_ambient: [0.1, 0.1, 0.2],
+      u_lightCount: lights.length,
       
       u_gamma: 2.2,
     };
+
+    lights.forEach((l, ndx) => {
+      sharedUniforms["u_lights[" + ndx + "].position"] = l.position;
+      sharedUniforms["u_lights[" + ndx + "].color"] = l.color;
+      sharedUniforms["u_lights[" + ndx + "].intensity"] = l.intensity;
+    });
 
     // ------ Draw the objects --------
 
