@@ -55,7 +55,7 @@ function leave()	{
 function destroySession()	{
 	let req = new XMLHttpRequest;
 
-	req.open('GET', 'server.php?op=destroySession&id=' + getCookie("session_id"), false);
+	req.open('GET', 'server.php?op=destroySession&id=' + getCookie("session_id"));
 	
 	req.withCredentials = true;
 
@@ -78,6 +78,7 @@ function createSession()        {
 			console.log("CREATE SESSION: " + req.response);
 			if (!req.response.includes("Erfolg"))	{
 				alert("Die Sitzung konnte leider aufgrund eines Fehlers nicht erstellt werden");
+				window.location.href = "lobby.php";
 				//window.location.href = "lobby.php";
 			}
 		}
