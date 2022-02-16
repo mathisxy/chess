@@ -573,8 +573,8 @@ function onDraw(time, deltaTime, draw) {
       const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
       const material = isBlack ? materials.black : materials.white;
-	const hover = equals2d(field, activeField) ? [0.0, 0.0, 0.0] : [0.0, hoverIntensity, 0.0];
-      const obj = makeObject(shape, add(getCoords([i, j]), hover), [0, rotation, 0], [scale, scale, scale], material);
+	const hover = activeField != null && quals2d(field, activeField) ? [0.0, 0.0, 0.0] : [0.0, hoverIntensity, 0.0];
+      const obj = makeObject(shape, addVec3(getCoords([i, j]), hover), [0, rotation, 0], [scale, scale, scale], material);
       computeUniforms(obj);
       draw(obj);
     }
