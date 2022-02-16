@@ -525,6 +525,16 @@ async function main() {
   // normal with a_normal etc..
   twgl.setAttributePrefix("a_");
 
+  // var extFBF = gl.getExtension('EXT_color_buffer_float');
+  // const fbi = twgl.createFramebufferInfo(gl, [
+  //   { format: extFBF.}
+  // ]);
+
+  // const rb = gl.createRenderbuffer();
+  // gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+  // gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_STENCIL, gl.drawingBufferWidth, gl.drawingBufferHeight);
+  // gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.RENDERBUFFER, rb);
+
   // setup GLSL program
   var programInfo = twgl.createProgramInfo(gl, [vs, fs]);
   var skyboxProgramInfo = twgl.createProgramInfo(gl, [skyboxVertexShaderSource, skyboxFragmentShaderSource]);
