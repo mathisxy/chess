@@ -407,7 +407,7 @@ var rgbLamps = 2.0;
 
 var camera = {
   position: [0, 0, 5],
-  target: board,
+  target: [0, -1.1, 0],
   up: [0, 1, 0],
   fov: 60 * Math.PI / 180,
   near: 0.1,
@@ -599,6 +599,10 @@ function setRgbLights(intensity) {
   lights[1].intensity = lights[2].intensity = lights[3].intensity = intensity;
 }
 
+function closeCam() {
+  cameraBase = [0, -0.3, .8];
+}
+
 async function main() {
   if (typeof whiteView === 'undefined') {
     alert("Bitte die Lobby verwenden um einem Spiel beizutreten");
@@ -720,8 +724,8 @@ async function main() {
     white: { albedo: textures.white, roughness: solidTexture(gl, 150), },
     black: { albedo: textures.black, roughness: solidTexture(gl, 130), },
     test: { albedo: textures.metal, roughness: textures.metalRough, metallic: textures.metalMetallic, },
-    test2: { albedo: textures.plastic, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
-    test3: { albedo: textures.plastic, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
+    test2: { albedo: textures.trueBlack, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
+    test3: { albedo: textures.white, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
   };
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], materials.board));
