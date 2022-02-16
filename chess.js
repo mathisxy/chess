@@ -497,9 +497,15 @@ document.addEventListener("keydown", function(event) {
 function getField(i) {  return [i%8, Math.floor(i/8)]; }
 function getIndex(arr) { return arr[0] + arr[1]*8; }
 function removePawn()	{
-	if (activeField == null)	{ return; }
+	if (activeField == null)	{ alert("Keine Figur ausgewählt"); return; }
 	if (confirm("Soll die aktive Figur wirklich entfernt werden?"))	{
-		field(getIndex(activeField)) = 0;
+		field[getIndex(activeField)] = 0;
+		activeField = null;
+	}
+}
+function addPawn(i)	{
+	if (confirm("Soll hier wirklich die " + (i > 6 ? "schwarze " : "weiße ") + "Figur " + figureNames[(i-1)%6] + " eingefügt werden?"))	{
+		field[getIndex([pointer.i, pointer.j])] = i;
 	}
 }
 function touchFigure() {
