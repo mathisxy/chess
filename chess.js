@@ -402,6 +402,7 @@ var cameraMomentum = 0;
 var figures = [];
 var activeField = null;
 var hoverIntensity = 0;
+var hoverDirection = 1;
 
 var rgbLamps = 2.0;
 
@@ -472,6 +473,22 @@ document.addEventListener("keydown", function(event) {
     if (document.getElementById("hints").style.display == "none") {document.getElementById("hints").style.display = "block";} else {document.getElementById("hints").style.display = "none";} return;
   case 27:
     leave(); return;
+	  case 8:
+		  removePawn(); return;
+	  case 46:
+		  removePawn(); return;
+	  case 49:
+		  addPawn(event.shiftKey ? 7 : 1); return;
+	  case 50:
+		  addPawn(event.shiftKey ? 8 : 2); return;
+	  case 51:
+		  addPawn(event.shiftKey ? 9 : 3); return;
+	  case 52:
+		  addPawn(event.shiftKey ? 10: 4); return;
+	  case 53:
+		  addPawn(event.shiftKey ? 11: 5); return;
+	  case 54:
+		  addPawn(event.shiftKey ? 12: 6); return;
   default:
     console.log("No matching keyCode event");
   }
@@ -479,7 +496,12 @@ document.addEventListener("keydown", function(event) {
 
 function getField(i) {  return [i%8, Math.floor(i/8)]; }
 function getIndex(arr) { return arr[0] + arr[1]*8; }
-
+function removePawn()	{
+	if (activeField == null)	{ return; }
+	if (confirm("Soll die aktive Figur wirklich entfernt werden?"))	{
+		field(getIndex(activeField)) = 0;
+	}
+}
 function touchFigure() {
   if (activeField !== null) {
     if (activeField[0] == pointer.i && activeField[1] == pointer.j) {
@@ -552,6 +574,9 @@ function refreshTranslation(obj) {
 
 function update(time, deltaTime) {
   pointer.obj.rotation[1] -= deltaTime * 0.0005;
+	hoverDirection = hoverIntensity > 1.0 ? -1 : hoverIntensity < 0.0 ? 1 : hoverDirection;
+	hoverIntensity = hoverIntensity > 1.0 ? 1.0 : hoverIntensity < 0.0 ? 0.0 : hoverIntensity;
+	hoverIntensity += deltaTime * 0.001 * hoverDirection;
   cameraZ += cameraMomentum * deltaTime * 0.05;
   cameraMomentum = clamp(cameraMomentum * Math.pow(0.999, deltaTime), -.01, .01);
 
@@ -573,7 +598,7 @@ function onDraw(time, deltaTime, draw) {
       const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
       const material = isBlack ? materials.black : materials.white;
-	const hover = activeField != null && quals2d(field, activeField) ? [0.0, 0.0, 0.0] : [0.0, hoverIntensity, 0.0];
+	const hover = (activeField !== null && equals2d([i, j], activeField)) ? [0.0, hoverIntensity * 0.13, 0.0] : [0, 0, 0];
       const obj = makeObject(shape, addVec3(getCoords([i, j]), hover), [0, rotation, 0], [scale, scale, scale], material);
       computeUniforms(obj);
       draw(obj);
