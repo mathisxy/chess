@@ -401,7 +401,7 @@ var figures = [];
 var activeField = null;
 var hoverIntensity = 0;
 
-var rgbLamps = 80.0;
+var rgbLamps = 2.0;
 
 var camera = {
   position: [0, 0, 5],
