@@ -1,8 +1,24 @@
 "use strict";
 
-var vs = `#version 300 es
+var vsPrelude = `#version 300 es
+precision highp float;
+`;
+
+var fsPrelude = `#version 300 es
 precision highp float;
 
+uniform float u_gamma;
+
+vec4 decodeColor(vec4 color) {
+  return vec4(pow(color.rgb, vec3(u_gamma)), color.a);
+}
+
+vec4 encodeColor(vec4 color) {
+  return vec4(pow(color.rgb, vec3(1.0/u_gamma)), color.a);
+}
+`;
+
+var vs = vsPrelude + `
 in vec4 a_position;
 in vec3 a_normal;
 in vec2 a_texcoord;
@@ -32,9 +48,7 @@ void main() {
 }
 `;
 
-var fs = `#version 300 es
-precision highp float;
-
+var fs = fsPrelude + `
 in vec4 v_position;
 in vec3 v_normal;
 in vec2 v_texcoord;
@@ -97,7 +111,7 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 }
 
 void main() {
-  vec4 diffuseColor = texture(u_texture, v_texcoord);
+  vec4 diffuseColor = decodeColor(texture(u_texture, v_texcoord));
   vec3 normal = normalize(v_normal);
   vec3 surfaceToLight = normalize(v_surfaceToLight);
   vec3 surfaceToView = normalize(v_surfaceToView);
@@ -118,16 +132,11 @@ void main() {
       ).rgb,
       diffuseColor.a);
 
-  //outColor = finalColor;
-  outColor = 0.2 * reflectColor + 0.8 * diffuseColor;
-  // outColor = vec4(v_texcoord.x * 1.0, v_texcoord.y * 1.0, 1, 1);
-  // outColor = texture(u_skybox, normalize(vec3(a_position)));
+  outColor = encodeColor(0.2 * reflectColor + 0.8 * diffuseColor);
 }
 `;
 
-var skyboxVertexShaderSource = `#version 300 es
-precision highp float;
-
+var skyboxVertexShaderSource = vsPrelude + `
 uniform mat4 u_viewProjectionInverse;
 
 in vec4 a_position;
@@ -139,9 +148,7 @@ void main() {
 }
 `;
 
-var skyboxFragmentShaderSource = `#version 300 es
-precision highp float;
-
+var skyboxFragmentShaderSource = fsPrelude + `
 uniform samplerCube u_skybox;
 
 in vec4 v_position;
@@ -153,7 +160,6 @@ void main() {
   outColor = texture(u_skybox, normalize(v_position.xyz));
 }
 `;
-
 
 function sleep(ms)  {
   return new Promise(resolve => setTimeout(resolve, ms));  
@@ -620,6 +626,8 @@ async function main() {
       u_specular: [1, 1, 1, 1],
       u_shininess: 50,
       u_specularFactor: 1,
+      
+      u_gamma: 2.2,
     };
 
     // ------ Draw the objects --------
@@ -663,6 +671,7 @@ async function main() {
     twgl.setUniforms(skyboxProgramInfo, {
       u_viewProjectionInverse: viewProjectionInverseMatrix,
       u_skybox: textures.skybox,
+      u_gamma: 2.2,
     });
 
     gl.bindVertexArray(quadVAO);
