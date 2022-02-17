@@ -212,7 +212,12 @@ in vec4 a_position;
 out vec4 v_position;
 
 void main() {
-  v_position = u_viewProjectionInverse * vec4(a_position.xy, 1, 1);
+	mat4 vPI = u_viewProjectionInverse;
+	vPI[0] = vPI[0] * 1.0;
+	vPI[1] = vPI[1] * 1.0;
+	vPI[2] = vPI[2] * 1.0;
+	vPI[3] = vPI[3] * 1.0;
+  v_position = vPI * vec4(a_position.xy, 1, 1);
   gl_Position = vec4(a_position.xy, 1, 1);
 }
 `;
