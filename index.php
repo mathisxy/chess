@@ -176,8 +176,10 @@ function getUpdate()	{
 			console.log(req.response);
 			//getUpdate();
                 }
-                else    {
-			say(req.response, getCookie("session_color"));
+		else    {
+			let resp = req.response.split("|");
+			document.cookie = "session_field=" + resp[1];
+			say(resp[0], getCookie("session_color"));
 			field = textToArr(getCookie("session_field"));
                 }
         }

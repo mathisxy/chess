@@ -387,7 +387,7 @@ const board   = [0.0, -1.2, 0.0];
 const pawnScale = 0.24;
 const whiteHorseRotation = 0.7854 *2;
 const blackHorseRotation = 2.3562 *2;
-const initialPointerField = [4, 4];
+const initialPointerField = [3, 3];
 const figureNames = ["Bauer", "Turm", "Pferd", "Läufer", "König", "Dame"];
 
 var figuresByNumber = null;
@@ -601,7 +601,7 @@ function onDraw(time, deltaTime, draw) {
       if (figure < 0) continue;
       const isBlack = figure >= 6;
       const shape = figuresByNumber[figure % 6];
-      const rotation = figure % 6 != 3 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
+      const rotation = figure % 6 != 2 ? 0 : isBlack ? blackHorseRotation : whiteHorseRotation;
       const scale = pawnScale;
       const material = isBlack ? materials.black : materials.white;
 	const hover = (activeField !== null && equals2d([i, j], activeField)) ? [0.0, hoverIntensity * 0.13, 0.0] : [0, 0, 0];
@@ -705,7 +705,7 @@ async function main() {
     sphere: toWebGL(gl, programInfo, await fetchOBJ('models/sphere.obj')),
   }
 
-  figuresByNumber = [models.pawn, models.tower, models.bishop, models.horse, models.king, models.queen];
+  figuresByNumber = [models.pawn, models.tower, models.horse, models.bishop, models.king, models.queen];
 
   textures = twgl.createTextures(gl, {
     white: {src: [255, 255, 255, 255]},

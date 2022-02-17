@@ -79,16 +79,19 @@ function joinSession()	{
 
 	require("dbQuery.php");
 	
-	if ($result == false)	{
+	if ($results == false)	{
 		echo "Error: Die Sitzung konnte nicht gefunden werden";
 		exit;
 	}
-	if (!isset($results['player1']))        {
+	$results = $results[0];
+	if (!isset($results['player1']) || $results['player1'] == "")        {
+		echo $results['player1'];
 		setcookie("session_color", "white");
 		setcookie("session_turn", "white");
 		 $query = "UPDATE sessions SET player1='$session_player', turn='white' WHERE id='$session_id'";
 	}
-	else if (!isset($results['player2']))   {
+	else if (!isset($results['player2']) || $results['player2'] == "")   {
+		echo $results['player2'];
 		setcookie("session_color", "black");
 		setcookie("session_turn", "white");
 		 $query = "UPDATE sessions SET player2='$session_player', turn='white' WHERE id='$session_id'";
@@ -100,8 +103,15 @@ function joinSession()	{
 
 	require('dbQuery.php');
 
+	$query = "SELECT * FROM sessions WHERE id='$session_id'";
+	require("dbQuery.php");
+
+	if ($results == false)	{ echo "Error: Die Sitzung wurde nicht gefunden || false"; exit; }
+	$player1 = $results[0]['player1'];
+	$player2 = $results[0]['player2'];
+
 	setcookie("session_field", initField());
-	echo "Erfolg";
+	echo "Erfolg: player1=$player1, player2=$player2";
 
 
 }
@@ -208,7 +218,7 @@ function getUpdate()	{
 	if ($results['turn'] == $_COOKIE['session_color'])	{
 		setcookie("session_turn", $results['turn']);
 		setcookie("session_field", $results['field']);
-		echo "Du bist am Zug";
+		echo "Du bist am Zug|" . $results['field'];
 	}
 	else	{
 		echo "false";
