@@ -19,20 +19,7 @@ if (!isset($_COOKIE['session_playerName']))	{
 <body>
 <h1>Lobby</h1>
 <ul id="sessions">
-<?php
 
-require('dbConnect.php');
-
-$query = "SELECT * FROM sessions";
-
-require('dbQuery.php');
-
-foreach($results as $session)	{
-
-	echo "<li><b>" . $session['name'] . "</b><br>Player1: " . $session['player1'] . "<br>Player2: " . $session['player2'] . "<br><a href='index.php?joinSession=set&session_id=" . $session['id'] . "'>Dieser Session beitreten</a></li>";
-}
-
-?>
 </ul><br><br>
 <h2>Neue Sitzung erstellen</h2>
 <form action="index.php" method="get">

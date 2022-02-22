@@ -145,7 +145,13 @@ function listSessionsForLobby()	{
 
 	foreach($results as $session)   {
 
-		        echo "<li><b>" . $session['name'] . "</b><br>Player1: " . $session['player1'] . "<br>Player2: " . $session['player2'] . "<br><a href='index.php?joinSession=set&session_id=" . $session['id'] . "'>Dieser Session beitreten</a></li>";
+		echo "<li><b>" . $session['name'] . "</b><br>Player1: " . $session['player1'] . "<br>Player2: " . $session['player2'] . "<br>";
+		if (!(isset($session['player1']) && isset($session['player2'])))	{
+			echo "<a href='index.php?joinSession=set&session_id=" . $session['id'] . "'>Dieser Session beitreten</a></li>";
+		}
+		else	{
+			echo "<br>";
+		}
 	}
 }
 function playerJoined()	{
