@@ -699,12 +699,12 @@ async function main() {
   var skyboxProgramInfo = twgl.createProgramInfo(gl, [skyboxVertexShaderSource, skyboxFragmentShaderSource]);
 
   var models = {
-    pawn: toWebGL(gl, programInfo, await fetchOBJ('models/weißerBauer.obj')),
-    king: toWebGL(gl, programInfo, await fetchOBJ('models/weißerKönig.obj')),
-    queen: toWebGL(gl, programInfo, await fetchOBJ('models/weißeDame.obj')),
-    tower: toWebGL(gl, programInfo, await fetchOBJ('models/weißerTurm.obj')),
-    horse: toWebGL(gl, programInfo, await fetchOBJ('models/weißesPferd.obj')),
-    bishop: toWebGL(gl, programInfo, await fetchOBJ('models/weißerLäufer.obj')),
+    pawn: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/pawn.obj')),
+    king: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/king.obj')),
+    queen: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/queen.obj')),
+    tower: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/tower.obj')),
+    horse: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/horse.obj')),
+    bishop: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/bishop.obj')),
     board: toWebGL(gl, programInfo, await fetchOBJ('models/cube.obj')),
     pointer: toWebGL(gl, programInfo, await fetchOBJ('models/pointer.obj')),
     sphere: toWebGL(gl, programInfo, await fetchOBJ('models/sphere.obj')),

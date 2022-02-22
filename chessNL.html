@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Chess</title>
+
+        <meta charset="UTF-8">
+
+        <script src="session.js"></script>
+        <link rel="stylesheet" href="style.css">
+
+        <script>
+            var whiteView = true;
+            field = textToArr('2,3,4,5,6,4,3,2,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,7,7,7,7,7,7,7,8,9,10,11,12,10,9,8');
+            full = true;
+        </script>
+    </head>
+
+    <body onbeforeunload="return warning()" onunload="destroySession()">
+        <div id="loadingInfo">
+            <div id="text">Weiß beginnt</div>
+        </div>
+
+        <div id="hints">
+            <b>Esc:</b> Spiel beenden,
+            <b>Pfeiltasten:</b> Cursor verschieben,
+            <b>Leertaste:</b> Figure nehmen bzw. setzen,
+            <b>Enter:</b> Zug bestätigen,
+            <b>awsd:</b> Kamera Steuerung,
+            <b>Löschtaste:</b> Ausgewählte Figur entfernen,
+            <b>1-6:</b> Weiße Figuren einfügen,
+            <b>Shift &amp; 1-6:</b> Schwarze Figuren einfügen,
+            <b>u:</b> Manuelles Update,
+            <b>h:</b> Hilfe öffnen bzw. verstecken
+        </div>
+
+        <canvas id="c" width="1000" height="410"></canvas>
+
+		<script src="lib/twgl-full.min.js"></script>
+		<script src="lib/m4.js"></script>
+
+        <script src="chess.js"></script>
+    </body>
+</html>
