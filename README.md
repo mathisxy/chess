@@ -45,11 +45,11 @@ In the browser debug console run:
 
 ## Screenshots
 
-![Screenshot 2022-02-23 013633.png](screenshots\Screenshot%202022-02-23%20013633.png)
+![Screenshot 2022-02-23 013633.png](screenshots/Screenshot%202022-02-23%20013633.png)
 
-![Screenshot 2022-02-23 013900.png](screenshots\Screenshot%202022-02-23%20013900.png)
+![Screenshot 2022-02-23 013900.png](screenshots/Screenshot%202022-02-23%20013900.png)
 
-![Screenshot 2022-02-23 013927.png](screenshots\Screenshot%202022-02-23%20013927.png)
+![Screenshot 2022-02-23 013927.png](screenshots/Screenshot%202022-02-23%20013927.png)
 
 ![Screenshot 2022-02-23 014009.png](screenshots\Screenshot%202022-02-23%20014009.png)
 
