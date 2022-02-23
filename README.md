@@ -51,12 +51,12 @@ In the browser debug console run:
 
 ![Screenshot 2022-02-23 013927.png](screenshots/Screenshot%202022-02-23%20013927.png)
 
-![Screenshot 2022-02-23 014009.png](screenshots\Screenshot%202022-02-23%20014009.png)
+![Screenshot 2022-02-23 014009.png](screenshots/Screenshot%202022-02-23%20014009.png)
 
-![Screenshot 2022-02-23 014048.png](screenshots\Screenshot%202022-02-23%20014048.png)
+![Screenshot 2022-02-23 014048.png](screenshots/Screenshot%202022-02-23%20014048.png)
 
-![Screenshot 2022-02-23 014132.png](screenshots\Screenshot%202022-02-23%20014132.png)
+![Screenshot 2022-02-23 014132.png](screenshots/Screenshot%202022-02-23%20014132.png)
 
-![Screenshot 2022-02-23 014145.png](screenshots\Screenshot%202022-02-23%20014145.png)
+![Screenshot 2022-02-23 014145.png](screenshots/Screenshot%202022-02-23%20014145.png)
 
-![Screenshot 2022-02-23 014201.png](screenshots\Screenshot%202022-02-23%20014201.png)
+![Screenshot 2022-02-23 014201.png](screenshots/Screenshot%202022-02-23%20014201.png)
