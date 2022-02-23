@@ -4,8 +4,11 @@
 
 - Visit mirror [without logic](https://www.mathis.party/game/index.php?nl) or [create a lobby here](https://www.mathis.party/game/lobby.php)
 
-- Start using `python3 -m http.server` or `python -m http.server`, then visit [localhost:8000/chessNL.html?nl](localhost:8000/chessNL.html?nl)
-* Start using `php -S localhost:8000` and visit [localhost:8000/index.php?nl](localhost:8000/index.php?nl)
+- Clone the repository `git clone https://github.com/mathisxy/chess; cd chess`
+  
+  - Start a static web-server using `python3 -m http.server` or `python -m http.server`, then visit [localhost:8000/chessNL.html?nl](http://localhost:8000/chessNL.html?nl)
+  
+  - Start a php web-server using `php -S localhost:8000` and visit [localhost:8000/index.php?nl](http://localhost:8000/index.php?nl)
 
 ## Features and Sources
 
