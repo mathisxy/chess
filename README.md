@@ -45,18 +45,18 @@ In the browser debug console run:
 
 ## Screenshots
 
-![Screenshot 2022-02-23 013633.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20013633.png)
+![Screenshot 2022-02-23 013633.png](screenshots\Screenshot%202022-02-23%20013633.png)
 
-![Screenshot 2022-02-23 013900.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20013900.png)
+![Screenshot 2022-02-23 013900.png](screenshots\Screenshot%202022-02-23%20013900.png)
 
-![Screenshot 2022-02-23 013927.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20013927.png)
+![Screenshot 2022-02-23 013927.png](screenshots\Screenshot%202022-02-23%20013927.png)
 
-![Screenshot 2022-02-23 014009.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20014009.png)
+![Screenshot 2022-02-23 014009.png](screenshots\Screenshot%202022-02-23%20014009.png)
 
-![Screenshot 2022-02-23 014048.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20014048.png)
+![Screenshot 2022-02-23 014048.png](screenshots\Screenshot%202022-02-23%20014048.png)
 
-![Screenshot 2022-02-23 014132.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20014132.png)
+![Screenshot 2022-02-23 014132.png](screenshots\Screenshot%202022-02-23%20014132.png)
 
-![Screenshot 2022-02-23 014145.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20014145.png)
+![Screenshot 2022-02-23 014145.png](screenshots\Screenshot%202022-02-23%20014145.png)
 
-![Screenshot 2022-02-23 014201.png](C:\Users\blend\scoop\apps\apache\current\htdocs\screenshots\Screenshot%202022-02-23%20014201.png)
+![Screenshot 2022-02-23 014201.png](screenshots\Screenshot%202022-02-23%20014201.png)
