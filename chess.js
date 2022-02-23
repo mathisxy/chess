@@ -763,8 +763,10 @@ async function main() {
     white: { albedo: textures.white, roughness: solidTexture(gl, 150), },
     black: { albedo: textures.black, roughness: solidTexture(gl, 130), },
     test: { albedo: textures.metal, roughness: textures.metalRough, metallic: textures.metalMetallic, },
-    test2: { albedo: textures.trueBlack, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
-    test3: { albedo: textures.white, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
+    testWD: { albedo: textures.white, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
+    testWM: { albedo: textures.white, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
+    testBD: { albedo: textures.black, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
+    testBM: { albedo: textures.black, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
   };
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], materials.board));
@@ -773,10 +775,13 @@ async function main() {
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
 
+  const debugObjectScale = [.15, .15, .15];
   debugObjects = [
-    makeObject(models.sphere, [0, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test),
-    makeObject(models.sphere, [0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test2),
-    makeObject(models.sphere, [-0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test3),
+    makeObject(models.sphere, [+0.0, -.8, 0], [0, 0, 0], debugObjectScale, materials.test),
+    makeObject(models.sphere, [+0.4, -.8, 0], [0, 0, 0], debugObjectScale, materials.testWD),
+    makeObject(models.sphere, [-0.4, -.8, 0], [0, 0, 0], debugObjectScale, materials.testWM),
+    makeObject(models.sphere, [+0.8, -.8, 0], [0, 0, 0], debugObjectScale, materials.testBD),
+    makeObject(models.sphere, [-0.8, -.8, 0], [0, 0, 0], debugObjectScale, materials.testBM),
   ];
   toggleDebugObjects();
 
