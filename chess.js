@@ -699,12 +699,12 @@ async function main() {
   var skyboxProgramInfo = twgl.createProgramInfo(gl, [skyboxVertexShaderSource, skyboxFragmentShaderSource]);
 
   var models = {
-    pawn: toWebGL(gl, programInfo, await fetchOBJ('models/weißerBauer.obj')),
-    king: toWebGL(gl, programInfo, await fetchOBJ('models/weißerKönig.obj')),
-    queen: toWebGL(gl, programInfo, await fetchOBJ('models/weißeDame.obj')),
-    tower: toWebGL(gl, programInfo, await fetchOBJ('models/weißerTurm.obj')),
-    horse: toWebGL(gl, programInfo, await fetchOBJ('models/weißesPferd.obj')),
-    bishop: toWebGL(gl, programInfo, await fetchOBJ('models/weißerLäufer.obj')),
+    pawn: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/pawn.obj')),
+    king: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/king.obj')),
+    queen: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/queen.obj')),
+    tower: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/tower.obj')),
+    horse: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/horse.obj')),
+    bishop: toWebGL(gl, programInfo, await fetchOBJ('models/pieces/bishop.obj')),
     board: toWebGL(gl, programInfo, await fetchOBJ('models/cube.obj')),
     pointer: toWebGL(gl, programInfo, await fetchOBJ('models/pointer.obj')),
     sphere: toWebGL(gl, programInfo, await fetchOBJ('models/sphere.obj')),
@@ -763,8 +763,10 @@ async function main() {
     white: { albedo: textures.white, roughness: solidTexture(gl, 150), },
     black: { albedo: textures.black, roughness: solidTexture(gl, 130), },
     test: { albedo: textures.metal, roughness: textures.metalRough, metallic: textures.metalMetallic, },
-    test2: { albedo: textures.trueBlack, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
-    test3: { albedo: textures.white, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
+    testWD: { albedo: textures.white, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
+    testWM: { albedo: textures.white, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
+    testBD: { albedo: textures.black, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 0), },
+    testBM: { albedo: textures.black, roughness: solidTexture(gl, 1), metallic: solidTexture(gl, 255), },
   };
 
   objects.push(makeObject(models.board, board, [0, 0, 0], [1, 1, 1], materials.board));
@@ -773,10 +775,13 @@ async function main() {
   objects.push(pointerObj);
   pointer = { obj: pointerObj, i: initialPointerField[0], j: initialPointerField[1] };
 
+  const debugObjectScale = [.15, .15, .15];
   debugObjects = [
-    makeObject(models.sphere, [0, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test),
-    makeObject(models.sphere, [0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test2),
-    makeObject(models.sphere, [-0.4, -.8, 0], [0, 0, 0], [.2, .2, .2], materials.test3),
+    makeObject(models.sphere, [+0.0, -.8, 0], [0, 0, 0], debugObjectScale, materials.test),
+    makeObject(models.sphere, [+0.4, -.8, 0], [0, 0, 0], debugObjectScale, materials.testWD),
+    makeObject(models.sphere, [-0.4, -.8, 0], [0, 0, 0], debugObjectScale, materials.testWM),
+    makeObject(models.sphere, [+0.8, -.8, 0], [0, 0, 0], debugObjectScale, materials.testBD),
+    makeObject(models.sphere, [-0.8, -.8, 0], [0, 0, 0], debugObjectScale, materials.testBM),
   ];
   toggleDebugObjects();
 
