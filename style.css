@@ -1,0 +1,30 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: black;
+}
+
+#c {
+    width: 100%;
+    height: calc(99vh);
+}
+
+#text {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    font-size: 24px;
+    background-color: grey;
+    text-align: center;
+}
+
+#hints {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    font-size: 18px;
+    background-color: grey;
+    text-align: center;
+}
