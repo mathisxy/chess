@@ -48,6 +48,7 @@ function leave()	{
 		if (confirm("Sitzung löschen?"))	{
 			destroySession();
 			window.onbeforeunload = null;
+			
 			window.location.href = "lobby.php";
 		}
 	}
@@ -55,7 +56,7 @@ function leave()	{
 function destroySession()	{
 	let req = new XMLHttpRequest;
 
-	req.open('GET', 'server.php?op=destroySession&id=' + getCookie("session_id"));
+	req.open('GET', 'server.php?op=destroySession&id=' + getCookie("session_id"), false);
 	
 	req.withCredentials = true;
 
