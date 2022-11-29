@@ -2,7 +2,7 @@
 
 ## Options to run:
 
-- Visit mirror [without logic](http://www.home.mathis.party/index.php/weiterleitung?link=https://www.mathis.party/game/index.php?nl) or [create a lobby here](http://www.home.mathis.party/index.php/weiterleitung?link=https://www.mathis.party/game/lobby.php)
+- Visit mirror [without logic](https://www.mathis.party/game/index.php?nl) or [create a lobby here](https://www.mathis.party/game/lobby.php)
 
 - Clone the repository `git clone https://github.com/mathisxy/chess; cd chess`
   
